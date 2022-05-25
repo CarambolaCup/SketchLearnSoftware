@@ -28,11 +28,11 @@ bool operator<(ID_input an, ID_input bn)
     return false;
 }
 
-set<ID_input> readindata()
+int main()
 {
     set<ID_input> all_id_set;
     char datafileName[100];
-    sprintf(datafileName, "formatted00.dat");
+    sprintf(datafileName, "./data/0.dat");
     FILE *fin = fopen(datafileName, "rb");
     ID_input tmp_five_tuple;
 
@@ -45,6 +45,8 @@ set<ID_input> readindata()
         }
         ++kkk;
     }
+    int test_a = all_id_set.size();
+        
     fclose(fin);
-    return all_id_set;
+    return 0;
 }

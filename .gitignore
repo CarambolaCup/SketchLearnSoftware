@@ -1,2 +1,5 @@
 # Too Large Files
 formatted00.dat
+
+# C++ running files
+*.exe
