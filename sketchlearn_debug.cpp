@@ -30,14 +30,14 @@ const int TimeStamp_length = 0;
 class ID_input
 {
 public:
-    char x[ID_length + TimeStamp_length+1];
+    char x[ID_length + TimeStamp_length + 1];
     operator char *() const
     {
-        return (char*)x;
+        return (char *)x;
     }
-    operator unsigned char* () const
+    operator unsigned char *() const
     {
-        return (unsigned char*)x;
+        return (unsigned char *)x;
     }
     bool operator<(const ID_input &_f) const
     {
@@ -64,8 +64,8 @@ const int c = 100; // 100是我瞎写的
 // h1,h2...,hr 下标从1开始
 uint32_t (*hash_function[r + 1])(char *);
 
-uint64_t AwareHash(unsigned char* data, uint64_t n,
-    uint64_t hash, uint64_t scale, uint64_t hardener)
+uint64_t AwareHash(unsigned char *data, uint64_t n,
+                   uint64_t hash, uint64_t scale, uint64_t hardener)
 {
 
     while (n)
@@ -79,13 +79,13 @@ uint64_t AwareHash(unsigned char* data, uint64_t n,
 
 // 测试哈希函数，六个质数为随机选取
 // 哈希返回为1 ~ c
-uint32_t test_hash_0(char* f)
+uint32_t test_hash_0(char *f)
 {
-    return AwareHash((unsigned char*)f, ID_length, 354289553, 354289627, 1054289603) % c + 1;
+    return AwareHash((unsigned char *)f, ID_length, 354289553, 354289627, 1054289603) % c + 1;
 }
-uint32_t test_hash_1(char* f)
+uint32_t test_hash_1(char *f)
 {
-    return AwareHash((unsigned char*)f, ID_length, 554289569, 554289613, 2054289649) % c + 1;
+    return AwareHash((unsigned char *)f, ID_length, 554289569, 554289613, 2054289649) % c + 1;
 }
 
 vector<ID_input> all_id_flow;
@@ -109,7 +109,7 @@ int Read_Flowdata()
 
     ID_input tmp_five_tuple;
 
-    FILE* fin = fopen(datafileName, "rb");
+    FILE *fin = fopen(datafileName, "rb");
     if (NULL != fin)
     {
         int k_count = 0;
@@ -137,7 +137,7 @@ int Read_Flowdata()
 }
 
 //使用了大端法
-int get_bit(unsigned char* a, int pos)
+int get_bit(unsigned char *a, int pos)
 {
     int byte = pos / 8;
     int bit = pos % 8;
@@ -165,7 +165,7 @@ void Flow2Sketch()
         for (size_t k = 1; k <= ID_length * 8; k++)
         {
             // 0 则对 V[k] 无影响
-            if (0 != get_bit((unsigned char*)tmp_flow, k - 1))
+            if (0 != get_bit((unsigned char *)tmp_flow, k - 1))
             {
                 for (size_t i = 1; i <= r; i++)
                 {
@@ -229,7 +229,7 @@ struct ans_t // 是extract large flow返回向量中元素的type
 };
 
 double cal_hat_p(double theta, int i, int j,
-    unsigned int V[][r + 1][c + 1], double* p, double* sigama2, int k) // 计算大流第k个bit为1的概率
+                 unsigned int V[][r + 1][c + 1], double *p, double *sigama2, int k) // 计算大流第k个bit为1的概率
 {
     double r = (double)V[k][i][j] / V[0][i][j];
     if (r < theta)
@@ -242,9 +242,9 @@ double cal_hat_p(double theta, int i, int j,
     }
     double ans = 0;
     double prob_1 = (V[k][i][j] - theta * V[0][i][j]) /
-        (V[k][i][j] - theta * V[0][i][j]);
+                    (V[k][i][j] - theta * V[0][i][j]);
     double prob_0 = (V[k][i][j]) /
-        (V[k][i][j] - theta * V[0][i][j]);
+                    (V[k][i][j] - theta * V[0][i][j]);
     double normal_val1 = normalCFD((prob_1 - p[k]) / sqrt(sigama2[k]));
     double normal_val0 = normalCFD((prob_0 - p[k]) / sqrt(sigama2[k]));
     return normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]);
@@ -270,7 +270,7 @@ char current_T[l + 2];                    // 一个辅助函数的全局变量
 
 int flag_ = 0;
 
-void find_possible_flows(int i, int j, int k, char* T) // 找到正则表达式中所有可能的流
+void find_possible_flows(int i, int j, int k, char *T) // 找到正则表达式中所有可能的流
 {
     if (k == l + 1)
     {
@@ -325,7 +325,7 @@ void find_possible_flows(int i, int j, int k, char* T) // 找到正则表达式�
  *
  */
 vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
-    unsigned int V[][r + 1][c + 1], double* p, double* sigama2)
+                                unsigned int V[][r + 1][c + 1], double *p, double *sigama2)
 {
     // 第一步，计算每个bit的概率估值
     double hat_p[l + 1];
@@ -333,8 +333,8 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     {
         hat_p[k] = cal_hat_p(theta, i, j, V, p, sigama2, k);
     }
-    //printf("V[%d][%d] step 1 completed\n", i, j);
-    // 第二步，找到所有候选的大流，存在possible_flows里面
+    // printf("V[%d][%d] step 1 completed\n", i, j);
+    //  第二步，找到所有候选的大流，存在possible_flows里面
     char T[l + 2];
     for (int k = 1; k <= l; k++)
     {
@@ -357,13 +357,13 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     current_T[0] = '#';
     possible_flows.clear();
     find_possible_flows(i, j, 1, T);
-    //printf("V[%d][%d] step 2 completed\n", i, j);
-    // 第三步，估计大流的频率和可能性向量
+    // printf("V[%d][%d] step 2 completed\n", i, j);
+    //  第三步，估计大流的频率和可能性向量
     double estimated_frequency[l + 1];
     double estimated_p[l + 1];
     vector<ans_t> result;
     for (vector<two_types_of_flow>::iterator item = possible_flows.begin();
-        item != possible_flows.end(); item++)
+         item != possible_flows.end(); item++)
     {
         for (int k = 1; k <= l; k++)
         {
@@ -383,8 +383,8 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
         sort(estimated_frequency + 1, estimated_frequency + 1 + l);
         result.push_back(ans_t(item->bit_flow, item->flow, estimated_frequency[l / 2], estimated_p));
     }
-    //printf("V[%d][%d] step 3 completed\n", i, j);
-    // 第四步，去sketch里查候选流的数据，删掉过小的
+    // printf("V[%d][%d] step 3 completed\n", i, j);
+    //  第四步，去sketch里查候选流的数据，删掉过小的
     if (r == 1)
     {
         return result;
@@ -438,7 +438,7 @@ void RemoveFlows(vector<ans_t> FF)
     uint32_t tmp_hash[r + 1];
     for (int it = 0; it < FF.size(); it++)
     {
-        char* ans = FF[it].flow;
+        char *ans = FF[it].flow;
 
         for (size_t i = 1; i <= r; i++)
         {
@@ -476,11 +476,11 @@ bool Terminate()
                     sigma_num1++;
             }
         }
-        //printf("V[%d] sigma1_num=%d,sigma2_num=%d,sigma3_num=%d\n", (int)k, (int)sigma_num1, (int)sigma_num2, (int)sigma_num3);
+        // printf("V[%d] sigma1_num=%d,sigma2_num=%d,sigma3_num=%d\n", (int)k, (int)sigma_num1, (int)sigma_num2, (int)sigma_num3);
         double rate1 = (double)sigma_num1 / (double)(r * c);
         double rate2 = (double)sigma_num2 / (double)(r * c);
         double rate3 = (double)sigma_num3 / (double)(r * c);
-        //printf("V[%d] rate1=%lf,rate2=%lf,rate3=%lf\n", (int)k, rate1, rate2, rate3);
+        // printf("V[%d] rate1=%lf,rate2=%lf,rate3=%lf\n", (int)k, rate1, rate2, rate3);
         if (rate1 < 0.6826)
             return false;
         if (rate2 < 0.9544)
@@ -514,36 +514,43 @@ int main()
     // F为所有大流集合，FF为每次循环找出的大流集合
     vector<ans_t> F;
     double theta = 0.5;
-    int nnnn = 4;
-    while (nnnn--) {
-    vector<ans_t> FF;
-    for (int i = 1; i <= r; i++)
+    int nnnn = 1;
+    while (1)
     {
-        for (int j = 1; j <= c; j++)
+        vector<ans_t> FF;
+        for (int i = 1; i <= r; i++)
         {
-            vector<ans_t> temp_F = ExtractLargeFlows(theta, i, j,
-                V, p, sigma);
-            if (!temp_F.empty())
+            for (int j = 1; j <= c; j++)
             {
-                for (vector<ans_t>::iterator it = temp_F.begin(); it < temp_F.end(); it++)
-                    FF.push_back(*it);
+                vector<ans_t> temp_F = ExtractLargeFlows(theta, i, j,
+                                                         V, p, sigma);
+                if (!temp_F.empty())
+                {
+                    for (vector<ans_t>::iterator it = temp_F.begin(); it < temp_F.end(); it++)
+                        FF.push_back(*it);
+                }
             }
         }
-    }
-    //本次循环找出大流时，剔除大流，重新计算期望、方差
-    if (!FF.empty())
-    {
-        for (vector<ans_t>::iterator it = FF.begin(); it < FF.end(); it++)
-            F.push_back(*it);
-        RemoveFlows(FF);
-        //printf("RemoveFlowscompleted\n");
-        Sketch2N_p_sigma();
-    }
-    printf("%d loop is completed______________\n\n", nnnn);
-    nnnn++;
-     if (Terminate())break;
-    //没有找出大流，theta减半
-     if (FF.empty())theta /= 2;
+        //本次循环找出大流时，剔除大流，重新计算期望、方差
+        if (!FF.empty())
+        {
+            for (vector<ans_t>::iterator it = FF.begin(); it < FF.end(); it++)
+                F.push_back(*it);
+            RemoveFlows(FF);
+            // printf("RemoveFlowscompleted\n");
+            Sketch2N_p_sigma();
+        }
+        printf("%d loop is completed______________\n\n", nnnn);
+        nnnn++;
+
+        if (nnnn > 10000)
+            break;
+
+        if (Terminate())
+            break;
+        //没有找出大流，theta减半
+        if (FF.empty())
+            theta /= 2;
     }
 
 #ifdef DEBUG
