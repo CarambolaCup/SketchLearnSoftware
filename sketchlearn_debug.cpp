@@ -104,7 +104,8 @@ int Read_Flowdata()
 #ifndef SMALL_DATA
     sprintf(datafileName, "./formatted00.dat");
 #else
-    sprintf(datafileName, "./data/0.dat");
+    //sprintf(datafileName, "./data/0.dat");
+    sprintf(datafileName, "./data/all1.dat");
 #endif // !SMALL_DATA
 
     ID_input tmp_five_tuple;
