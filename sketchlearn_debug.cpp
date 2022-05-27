@@ -398,6 +398,7 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     {
         return result;
     }
+    flag_ = 0;
     for (vector<ans_t>::iterator item = result.begin(); item != result.end(); item++)
     {
         if (flag_ == 1)
