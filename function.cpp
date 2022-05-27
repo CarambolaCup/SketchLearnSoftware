@@ -10,13 +10,19 @@
 
 using namespace std;
 
+//#define SMALL_DATA    //小数据测试开关
+
 // 兰佳晨
 // Encoded in CRLF UTF-8
 
 // 流键 13个byte
 // 时间戳 13个byte
 const int ID_length = 13;
+#ifndef SMALL_DATA
 const int TimeStamp_length = 13;
+#else
+const int TimeStamp_length = 0;
+#endif // !SMALL_DATA
 
 class ID_input
 {
@@ -54,31 +60,35 @@ const int l = 105;
 const int r = 2;   // 2是我瞎写的
 const int c = 100; // 100是我瞎写的
 
-uint32_t (*hash_function[r])(char *); // r个哈希函数，需要搭框架的时候顺便实现一下(这里没有实现)
+// h1,h2...,hr 下标从1开始
+uint32_t (*hash_function[r + 1])(char *); 
 
-uint64_t AwareHash(unsigned char* data, uint64_t n,
-        uint64_t hash, uint64_t scale, uint64_t hardener) {
+uint64_t AwareHash(unsigned char *data, uint64_t n,
+                   uint64_t hash, uint64_t scale, uint64_t hardener)
+{
 
-	while (n) {
-		hash *= scale;
-		hash += *data++;
-		n--;
-	}
-	return hash ^ hardener;
+    while (n)
+    {
+        hash *= scale;
+        hash += *data++;
+        n--;
+    }
+    return hash ^ hardener;
 }
 
 // 测试哈希函数，六个质数为随机选取
+// 哈希返回为1 ~ c
 uint32_t test_hash_0(char *f)
 {
-    return AwareHash((unsigned char*)f,ID_length,354289553,354289627,1054289603) % c;
+    return AwareHash((unsigned char *)f, ID_length, 354289553, 354289627, 1054289603) % c + 1;
 }
 uint32_t test_hash_1(char *f)
 {
-    return AwareHash((unsigned char*)f,ID_length,554289569,554289613,2054289649) % c;
+    return AwareHash((unsigned char *)f, ID_length, 554289569, 554289613, 2054289649) % c + 1;
 }
 
 vector<ID_input> all_id_flow;
-// 按V[k][i][j]排列 应该可以不用加1(但我还是加了)
+// 按V[k][i][j]排列 k = 0 为总的层 i j 都从1开始
 unsigned int V[l + 1][r + 1][c + 1];
 // 均值
 double p[l + 1];
@@ -90,7 +100,12 @@ int Read_Flowdata()
 {
     char datafileName[100];
     // 注意文件路径
+#ifndef SMALL_DATA
     sprintf(datafileName, "./formatted00.dat");
+#else
+    sprintf(datafileName, "./data/0.dat");
+#endif // !SMALL_DATA
+
     ID_input tmp_five_tuple;
 
     FILE *fin = fopen(datafileName, "rb");
@@ -106,6 +121,7 @@ int Read_Flowdata()
         }
 
         fclose(fin);
+
         // 约 2000 0000
         int test_a = all_id_flow.size();
         return 0;
@@ -115,7 +131,6 @@ int Read_Flowdata()
         return -1;
     }
 }
-
 
 //使用了大端法
 int get_bit(unsigned char *a, int pos)
@@ -135,10 +150,10 @@ int get_bit(unsigned char *a, int pos)
 void Flow2Sketch()
 {
     vector<ID_input> tmp_data = all_id_flow;
-    uint32_t tmp_hash[r];
+    uint32_t tmp_hash[r+1];
     for (ID_input tmp_flow : tmp_data)
     {
-        for (size_t i = 0; i < r; i++)
+        for (size_t i = 1; i <= r; i++)
         {
             tmp_hash[i] = hash_function[i](tmp_flow);
             ++V[0][i][tmp_hash[i]];
@@ -146,9 +161,9 @@ void Flow2Sketch()
         for (size_t k = 1; k <= ID_length * 8; k++)
         {
             // 0 则对 V[k] 无影响
-            if (0 != get_bit((unsigned char *)tmp_flow, k-1))
+            if (0 != get_bit((unsigned char *)tmp_flow, k - 1))
             {
-                for (size_t i = 0; i < r; i++)
+                for (size_t i = 1; i <= r; i++)
                 {
                     ++V[k][i][tmp_hash[i]];
                 }
@@ -157,20 +172,19 @@ void Flow2Sketch()
     }
 }
 
-// 方差计算有问题，在此数据集下，由于数据过大会产生NaN 故加double损失精度
 void Sketch2N_p_sigma()
 {
     // 此处是否需要unsigned long long ?
     unsigned int sum;
     //平方和-和平方 未知精度是否足够
     double square_sum;
-    for (size_t k = 0; k < ID_length * 8; k++)
+    for (size_t k = 0; k <= ID_length * 8; k++)
     {
         sum = 0;
         square_sum = 0;
-        for (size_t i = 0; i < r; i++)
+        for (size_t i = 1; i <= r; i++)
         {
-            for (size_t j = 0; j < c; j++)
+            for (size_t j = 1; j <= c; j++)
             {
                 sum += V[k][i][j];
                 square_sum += (double)V[k][i][j] * (double)V[k][i][j]; // 约10^12数量级
@@ -398,8 +412,8 @@ int main()
     if (0 == Read_Flowdata()) //流数据读入
     {
         // 赋予哈希函数
-        hash_function[0] = test_hash_0;
-        hash_function[1] = test_hash_1;
+        hash_function[1] = test_hash_0;
+        hash_function[2] = test_hash_1;
         // 流转sketch
         Flow2Sketch();
         // sketch 生成N(p,sigma)
