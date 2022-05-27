@@ -210,10 +210,10 @@ struct ans_t // 是extract large flow返回向量中元素的type
     char flow[(l + 7) / 8 + 1]; // 这个是跟源数据相同的结构
     unsigned int size;          // 流的大小
     double prob_vector[l + 2];  // 可能性向量
-    ans_t(char *bbit_flow, char *fflow, unsigned int ssize = 0, double *pprob_vector = NULL)
+    ans_t(char* bbit_flow, char* fflow, unsigned int ssize = 0, double* pprob_vector = NULL)
     {
-        strcpy(bbit_flow, bit_flow);
-        strcpy(fflow, flow);
+        strcpy(bit_flow, bbit_flow);
+        strcpy(flow, fflow);
         if (pprob_vector != NULL)
         {
             for (int i = 1; i <= l; i++)
@@ -251,10 +251,14 @@ struct two_types_of_flow // 两种流表示
 {
     char bit_flow[l + 2];       // 一个'1'或者'0'表示一个bit
     char flow[(l + 7) / 8 + 1]; // 应该是和给定的数据一样的结构(不知道会不会有bug...)
-    two_types_of_flow(char *bbit_flow, char *fflow)
+    two_types_of_flow(char* bbit_flow, char* fflow)
     {
-        strcpy(bbit_flow, bit_flow);
-        strcpy(fflow, flow);
+        strcpy(bit_flow, bbit_flow);
+        for (int i = 0; i < (l + 7) / 8; i++)
+        {
+            flow[i] = fflow[i];
+        }
+        flow[(l + 7) / 8] = '\0';
     }
 };
 
@@ -355,7 +359,9 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
         }
     }
     T[l + 1] = '\0';
+    T[0] = '#';
     current_T[l + 1] = '\0';
+    current_T[0] = '#';
     possible_flows.clear();
     if (i == 1 && j == 57)
         printf("V[%d][%d] before find_possible_flows\n", i, j);
