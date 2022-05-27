@@ -444,17 +444,23 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
 void RemoveFlows(vector<ans_t> FF)
 {
     int FF_size = FF.size();
+    uint32_t tmp_hash[r+1];
     for (int it = 0; it < FF.size(); it++)
     {
         char *ans = FF[it].flow;
-        for (size_t k = 0; k < ID_length * 8; k++)
+
+        for (size_t i = 1; i <= r; i++)
         {
-            if (0 != get_bit((unsigned char *)ans, k))
+            tmp_hash[i] = hash_function[i](ans);
+            V[0][i][tmp_hash[i]]-= FF[it].size;
+        }
+        for (size_t k = 1; k <= ID_length * 8; k++)
+        {
+            if (0 != get_bit((unsigned char *)ans, k-1))
             {
-                for (size_t i = 0; i < r; i++)
+                for (size_t i = 1; i <= r; i++)
                 {
-                    int j = hash_function[i](ans);
-                    V[k][i][j] -= FF[it].size;
+                    V[k][i][tmp_hash[i]] -= FF[it].size;
                 }
             }
         }
