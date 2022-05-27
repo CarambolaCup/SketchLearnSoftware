@@ -54,7 +54,7 @@ const int l = 105;
 const int r = 2;   // 2是我瞎写的
 const int c = 100; // 100是我瞎写的
 
-uint32_t (*hash_function[r])(char *); // r个哈希函数，需要搭框架的时候顺便实现一下(这里没有实现)
+uint32_t (*hash_function[r])(char *); 
 
 uint64_t AwareHash(unsigned char* data, uint64_t n,
         uint64_t hash, uint64_t scale, uint64_t hardener) {
@@ -91,6 +91,7 @@ int Read_Flowdata()
     char datafileName[100];
     // 注意文件路径
     sprintf(datafileName, "./formatted00.dat");
+    //sprintf(datafileName, "./data/0.dat"); 
     ID_input tmp_five_tuple;
 
     FILE *fin = fopen(datafileName, "rb");
