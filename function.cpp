@@ -56,23 +56,34 @@ const int c = 100; // 100是我瞎写的
 
 uint32_t (*hash_function[r])(char *); // r个哈希函数，需要搭框架的时候顺便实现一下(这里没有实现)
 
-// 只是用来测试的两个哈希函数，37和57是随便选的
-uint32_t test_hash_0(char* f)
-{
-    return (unsigned int)f[0] % (unsigned int)37;
+uint64_t AwareHash(unsigned char* data, uint64_t n,
+        uint64_t hash, uint64_t scale, uint64_t hardener) {
+
+	while (n) {
+		hash *= scale;
+		hash += *data++;
+		n--;
+	}
+	return hash ^ hardener;
 }
-uint32_t test_hash_1(char* f)
+
+// 测试哈希函数，六个质数为随机选取
+uint32_t test_hash_0(char *f)
 {
-    return (unsigned int)f[0] % (unsigned int)57;
+    return AwareHash((unsigned char*)f,ID_length,354289553,354289627,1054289603) % c;
+}
+uint32_t test_hash_1(char *f)
+{
+    return AwareHash((unsigned char*)f,ID_length,554289569,554289613,2054289649) % c;
 }
 
 vector<ID_input> all_id_flow;
 // 按V[k][i][j]排列 应该可以不用加1(但我还是加了)
 unsigned int V[l + 1][r + 1][c + 1];
 // 均值
-double p[l+1];
+double p[l + 1];
 // 标准差,注意是方差开方
-double sigma[l+1];
+double sigma[l + 1];
 
 //.dat 转 vector<ID>
 int Read_Flowdata()
@@ -105,6 +116,8 @@ int Read_Flowdata()
     }
 }
 
+
+//使用了大端法
 int get_bit(unsigned char *a, int pos)
 {
     int byte = pos / 8;
@@ -122,16 +135,22 @@ int get_bit(unsigned char *a, int pos)
 void Flow2Sketch()
 {
     vector<ID_input> tmp_data = all_id_flow;
+    uint32_t tmp_hash[r];
     for (ID_input tmp_flow : tmp_data)
     {
-        for (size_t k = 0; k < ID_length * 8; k++)
+        for (size_t i = 0; i < r; i++)
+        {
+            tmp_hash[i] = hash_function[i](tmp_flow);
+            ++V[0][i][tmp_hash[i]];
+        }
+        for (size_t k = 1; k <= ID_length * 8; k++)
         {
             // 0 则对 V[k] 无影响
-            if (0 != get_bit((unsigned char *)tmp_flow, k))
+            if (0 != get_bit((unsigned char *)tmp_flow, k-1))
             {
                 for (size_t i = 0; i < r; i++)
                 {
-                    ++V[k][i][hash_function[i](tmp_flow)];
+                    ++V[k][i][tmp_hash[i]];
                 }
             }
         }
@@ -142,7 +161,7 @@ void Flow2Sketch()
 void Sketch2N_p_sigma()
 {
     // 此处是否需要unsigned long long ?
-    unsigned int sum; 
+    unsigned int sum;
     //平方和-和平方 未知精度是否足够
     double square_sum;
     for (size_t k = 0; k < ID_length * 8; k++)
@@ -157,8 +176,8 @@ void Sketch2N_p_sigma()
                 square_sum += (double)V[k][i][j] * (double)V[k][i][j]; // 约10^12数量级
             }
         }
-        p[k] = (double)sum / (double) (r * c);
-        sigma[k] = sqrt(square_sum / (long double) (r*c) - p[k] * p[k]);
+        p[k] = (double)sum / (double)(r * c);
+        sigma[k] = sqrt(square_sum / (long double)(r * c) - p[k] * p[k]);
     }
 }
 
@@ -380,7 +399,7 @@ int main()
     {
         // 赋予哈希函数
         hash_function[0] = test_hash_0;
-        hash_function[1] = test_hash_1;        
+        hash_function[1] = test_hash_1;
         // 流转sketch
         Flow2Sketch();
         // sketch 生成N(p,sigma)

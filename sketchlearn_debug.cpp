@@ -53,18 +53,29 @@ bool operator<(ID_input An, ID_input Bn)
 const int l = 105;
 const int r = 2;   // 2是我瞎写的
 const int c = 100; // 100是我瞎写的
-// r个哈希函数，需要搭框架的时候顺便实现一下(这里没有实现)
-uint32_t test_hash_0(char* f)
-{
-    return (unsigned int)f[0] % (unsigned int)37;
-}
-uint32_t test_hash_1(char* f)
-{
-    return (unsigned int)f[0] % (unsigned int)57;
-}
-uint32_t (* hash_function[r + 1])(char*)={0,test_hash_0 ,test_hash_1 };
 
-// 只是用来测试的两个哈希函数，37和57是随便选的
+uint32_t (*hash_function[r])(char *); 
+
+uint64_t AwareHash(unsigned char* data, uint64_t n,
+        uint64_t hash, uint64_t scale, uint64_t hardener) {
+
+	while (n) {
+		hash *= scale;
+		hash += *data++;
+		n--;
+	}
+	return hash ^ hardener;
+}
+
+// 测试哈希函数，六个质数为随机选取
+uint32_t test_hash_0(char *f)
+{
+    return AwareHash((unsigned char*)f,ID_length,354289553,354289627,1054289603) % c;
+}
+uint32_t test_hash_1(char *f)
+{
+    return AwareHash((unsigned char*)f,ID_length,554289569,554289613,2054289649) % c;
+}
 
 vector<ID_input> all_id_flow;
 // 按V[k][i][j]排列 应该可以不用加1(但我还是加了)
@@ -79,7 +90,7 @@ int Read_Flowdata()
 {
     char datafileName[100];
     // 注意文件路径
-    sprintf(datafileName, "./0.dat");
+    sprintf(datafileName, "./data/0.dat");
     ID_input tmp_five_tuple;
 
     FILE* fin = fopen(datafileName, "rb");
@@ -105,6 +116,7 @@ int Read_Flowdata()
     }
 }
 
+//使用了大端法 未知用意
 int get_bit(unsigned char* a, int pos)
 {
     int byte = pos / 8;
@@ -122,16 +134,22 @@ int get_bit(unsigned char* a, int pos)
 void Flow2Sketch()
 {
     vector<ID_input> tmp_data = all_id_flow;
+    uint32_t tmp_hash[r];
     for (ID_input tmp_flow : tmp_data)
     {
-        for (size_t k = 0; k < ID_length * 8; k++)
+        for (size_t i = 0; i < r; i++)
+        {
+            tmp_hash[i] = hash_function[i](tmp_flow);
+            ++V[0][i][tmp_hash[i]];
+        }
+        for (size_t k = 1; k <= ID_length * 8; k++)
         {
             // 0 则对 V[k] 无影响
-            if (0 != get_bit((unsigned char*)tmp_flow, k))
+            if (0 != get_bit((unsigned char *)tmp_flow, k-1))
             {
                 for (size_t i = 0; i < r; i++)
                 {
-                    ++V[k][i][hash_function[i](tmp_flow)];
+                    ++V[k][i][tmp_hash[i]];
                 }
             }
         }
