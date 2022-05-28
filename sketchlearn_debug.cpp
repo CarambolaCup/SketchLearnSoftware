@@ -13,7 +13,7 @@ using namespace std;
 #pragma warning(disable : 4996)
 
 //#define FILEOUT
-#define SMALL_DATA //小数据测试开关
+//#define SMALL_DATA //小数据测试开关
 #define DEBUG
 
 // 兰佳晨
@@ -30,6 +30,8 @@ const int TimeStamp_length = 0;
 
 bool my_cmp(char *, char *);
 void Flow_out(char *s);
+
+int num_of_star;
 
 class ID_input
 {
@@ -62,8 +64,8 @@ public:
 
 // 将l,r,c参数及hash函数提前,以方便使用
 const int l = 104;
-const int r = 2;   // 2是我瞎写的
-const int c = 100; // 100是我瞎写的
+const int r = 3;   // 2是我瞎写的
+const int c = 1000; // 100是我瞎写的
 
 // h1,h2...,hr 下标从1开始
 uint32_t (*hash_function[r + 1])(char *);
@@ -91,14 +93,21 @@ uint32_t test_hash_1(char *f)
 {
     return AwareHash((unsigned char *)f, ID_length, 554289569, 554289613, 2054289649) % c + 1;
 }
+uint32_t test_hash_2(char *f)
+{
+    return AwareHash((unsigned char *)f, ID_length, 654289577, 654289631, 2354289697) % c + 1;
+}
 
 vector<ID_input> all_id_flow;
 // 按V[k][i][j]排列 k = 0 为总的层 i j 都从1开始
 unsigned int V[l + 1][r + 1][c + 1];
+unsigned int V_initial[l + 1][r + 1][c + 1];
 // 均值
 double p[l + 1];
+double p_initial[l + 1];
 // 标准差,注意是方差开方
 double sigma[l + 1];
+double sigma_initial[l + 1];
 
 //.dat 转 vector<ID>
 int Read_Flowdata()
@@ -268,8 +277,12 @@ double cal_hat_p(double theta, int i, int j,
                     (V[0][i][j] - theta * V[0][i][j]);
     double normal_val1 = normalCFD((prob_1 - p[k]) / sigama[k]);
     double normal_val0 = normalCFD((prob_0 - p[k]) / sigama[k]);
-    printf("Sigama: %lf, Pk : %lf, i: %d, j: %d, theta: %lf, Vk: %d, V0: %d\n",sigama[k],p[k],i,j,theta,V[k][i][j],V[0][i][j]);
-    printf("PROB1 : %lf, PROB2 : %lf, N0 : %lf, N1: %lf, HAT_P : %lf\n",prob_0,prob_1, normal_val0, normal_val1, normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]));
+    if(normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) < 0.99 && normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) > 0.01 || 
+        normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) < 0 || normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) > 1)
+    {
+        printf("Sigama: %lf, Pk : %lf, i: %d, j: %d, theta: %lf, Vk: %d, V0: %d\n", sigama[k], p[k], i, j, theta, V[k][i][j], V[0][i][j]);
+        printf("PROB1 : %lf, PROB2 : %lf, N0 : %lf, N1: %lf, HAT_P : %lf\n", prob_0, prob_1, normal_val0, normal_val1, normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]));
+    }
     return normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]);
 }
 
@@ -293,10 +306,16 @@ char current_T[l + 2];                    // 一个辅助函数的全局变量
 
 int flag_ = 0;
 
+int loop_num = 0;
+
 void find_possible_flows(int i, int j, int k, char *T) // 找到正则表达式中所有可能的流
 {
     if (k == l + 1)
     {
+        if((loop_num++)%10000 == 0)
+        {
+            printf("%d stars: LOOP %d TIMES!\n", num_of_star,loop_num);
+        }
         char ans[(l + 7) / 8 + 1];
 
         for (int kk = 1; kk <= l; kk++)
@@ -305,11 +324,10 @@ void find_possible_flows(int i, int j, int k, char *T) // 找到正则表达式�
         }
 
         ans[(l + 7) / 8] = '\0';
-        if (i == 1 && j == 57)
-            printf("V[%d][%d] before hash\n", i, j);
         if (hash_function[i](ans) == j)
         {
             int flag = 0;
+            /*
             for (auto iter : all_id_flow)
             {
                 if (my_cmp(iter.x, ans))
@@ -321,16 +339,17 @@ void find_possible_flows(int i, int j, int k, char *T) // 找到正则表达式�
             if (flag == 0)
             {
                 printf("----------------NOT IN!-------------\n");
-                printf("T: %s\n",T);
+                printf("T: %s\n", T);
             }
-            else
+            else if (flag == 1)
             {
                 printf("----------------IN!-------------\n");
                 Flow_out(ans);
                 printf("\n");
             }
+            */
             possible_flows.push_back(two_types_of_flow(current_T, ans));
-            Flow_out(possible_flows.back().flow);
+            //Flow_out(possible_flows.back().flow);
         }
         return;
     }
@@ -339,19 +358,13 @@ void find_possible_flows(int i, int j, int k, char *T) // 找到正则表达式�
         if (T[k] != '*')
         {
             current_T[k] = T[k];
-            if (i == 1 && j == 57)
-                printf("V[%d][%d] %d completed,is%c\n", i, j, k, current_T[k]);
             find_possible_flows(i, j, k + 1, T);
         }
         else
         {
             current_T[k] = '0';
-            if (i == 1 && j == 57)
-                printf("V[%d][%d] %d is *, = %c\n", i, j, k, current_T[k]);
             find_possible_flows(i, j, k + 1, T);
             current_T[k] = '1';
-            if (i == 1 && j == 57)
-                printf("V[%d][%d] %d is *, = %c\n", i, j, k, current_T[k]);
             find_possible_flows(i, j, k + 1, T);
         }
     }
@@ -395,6 +408,16 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     }
     T[l + 1] = '\0';
     T[0] = '#';
+    num_of_star = 0;
+    loop_num = 0;
+    for(int kk = 1; kk <= l; kk++)
+    {
+        if(T[kk] == '*')
+        {
+            num_of_star++;
+        }
+    }
+    printf("There are %d stars\n",num_of_star);
     current_T[l + 1] = '\0';
     current_T[0] = '#';
     possible_flows.clear();
@@ -423,9 +446,9 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
             }
         }
         sort(estimated_frequency + 1, estimated_frequency + 1 + l);
-        Flow_out(item->flow);
+        //Flow_out(item->flow);
         result.push_back(ans_t(item->bit_flow, item->flow, estimated_frequency[l / 2], estimated_p));
-        Flow_out(result.back().flow);
+        //Flow_out(result.back().flow);
     }
     // printf("V[%d][%d] step 3 completed\n", i, j);
     //  第四步，去sketch里查候选流的数据，删掉过小的
@@ -433,18 +456,8 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     {
         return result;
     }
-    flag_ = 0;
-    for (vector<ans_t>::iterator item = result.begin(); item != result.end(); item++)
+    for (vector<ans_t>::iterator item = result.begin(); item != result.end(); )
     {
-        if (flag_ == 1)
-        {
-            vector<ans_t>::iterator tmp_item = item;
-            tmp_item--;
-            printf("ERASE!\n");
-            Flow_out(tmp_item->flow);
-            result.erase(tmp_item);
-        }
-        flag_ = 0;
         for (int ii = 1; ii <= r; ii++)
         {
             if (ii == i)
@@ -466,12 +479,11 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
         }
         if (item->size < theta * V[0][i][j])
         {
-            flag_ = 1;
-            /*
-            vector<ans_t>::iterator tmp_item = item;
-            item--;
-            result.erase(tmp_item);
-            */
+            item=result.erase(item);
+            if (item == result.end())break;
+        }
+        else {
+            item++;
         }
     }
     return result;
@@ -522,11 +534,11 @@ bool Terminate()
                     sigma_num1++;
             }
         }
-        // printf("V[%d] sigma1_num=%d,sigma2_num=%d,sigma3_num=%d\n", (int)k, (int)sigma_num1, (int)sigma_num2, (int)sigma_num3);
+         printf("V[%d] sigma1_num=%d,sigma2_num=%d,sigma3_num=%d\n", (int)k, (int)sigma_num1, (int)sigma_num2, (int)sigma_num3);
         double rate1 = (double)sigma_num1 / (double)(r * c);
         double rate2 = (double)sigma_num2 / (double)(r * c);
         double rate3 = (double)sigma_num3 / (double)(r * c);
-        // printf("V[%d] rate1=%lf,rate2=%lf,rate3=%lf\n", (int)k, rate1, rate2, rate3);
+         printf("V[%d] rate1=%lf,rate2=%lf,rate3=%lf\n", (int)k, rate1, rate2, rate3);
         if (rate1 < 0.6826)
             return false;
         if (rate2 < 0.9544)
@@ -569,6 +581,7 @@ int main()
         // 赋予哈希函数
         hash_function[1] = test_hash_0;
         hash_function[2] = test_hash_1;
+        hash_function[3] = test_hash_2;
         // 流转sketch
         Flow2Sketch();
         // sketch 生成N(p,sigma)
@@ -576,6 +589,9 @@ int main()
 
 #ifdef DEBUG
         printf("Read in flow data success\n");
+        memcpy(V_initial, V, sizeof(V));
+        memcpy(p_initial, p, sizeof(p));
+        memcpy(sigma_initial, sigma, sizeof(sigma));
 #endif // DEBUG
     }
     else
@@ -602,11 +618,22 @@ int main()
                                                          V, p, sigma);
                 if (!temp_F.empty())
                 {
-                    printf("CATCH!\n");
                     for (vector<ans_t>::iterator it = temp_F.begin(); it < temp_F.end(); it++)
                     {
-                        FF.push_back(*it);
-                        Flow_out(it->flow);
+                        bool temp_Fin = false;
+                        if (!FF.empty())
+                        {
+                            for (vector<ans_t>::iterator iter = FF.begin(); iter < FF.end(); iter++)
+                            {
+                                if (strcmp(iter->bit_flow, it->bit_flow) == 0)
+                                {
+                                    temp_Fin = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!temp_Fin)
+                            FF.push_back(*it);
                     }
                     printf("\n");
                 }
@@ -615,10 +642,32 @@ int main()
         //本次循环找出大流时，剔除大流，重新计算期望、方差
         if (!FF.empty())
         {
+            printf("SIZE : %d\n",FF.size());
             for (vector<ans_t>::iterator it = FF.begin(); it < FF.end(); it++)
-                F.push_back(*it);
+            {
+                bool FF_in = false;
+                vector<ans_t>::iterator temp_pos = FF.begin();
+                if (!F.empty())
+                {
+                    for (vector<ans_t>::iterator iter = F.begin(); iter < F.end(); iter++)
+                    {
+                        if (strcmp(iter->bit_flow, it->bit_flow) == 0)
+                        {
+                            FF_in = true;
+                            temp_pos = iter;
+                            break;
+                        }
+                    }
+                }
+                if (!FF_in)
+                    F.push_back(*it);
+                else if (FF_in)
+                {
+                    temp_pos->size += it->size;
+                }
+            }
             RemoveFlows(FF);
-            // printf("RemoveFlowscompleted\n");
+            printf("RemoveFlowscompleted\n");
             Sketch2N_p_sigma();
         }
         printf("%d loop is completed______________\n\n", nnnn);
