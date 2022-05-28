@@ -192,10 +192,9 @@ void Flow2Sketch()
 
 void Sketch2N_p_sigma()
 {
-    // 此处是否需要unsigned long long ?
-    unsigned int sum;
-    //平方和-和平方 未知精度是否足够
+    double sum;
     double square_sum;
+    double tmp_r;
     for (size_t k = 0; k <= ID_length * 8; k++)
     {
         sum = 0;
@@ -204,12 +203,13 @@ void Sketch2N_p_sigma()
         {
             for (size_t j = 1; j <= c; j++)
             {
-                sum += V[k][i][j];
-                square_sum += (double)V[k][i][j] * (double)V[k][i][j]; // 约10^12数量级
+                tmp_r = (double)(V[k][i][j]) / (double)(V[0][i][j]); 
+                sum += tmp_r;
+                square_sum += tmp_r * tmp_r; 
             }
         }
         p[k] = (double)sum / (double)(r * c);
-        sigma[k] = sqrt(square_sum / (long double)(r * c) - p[k] * p[k]);
+        sigma[k] = sqrt(square_sum / (double)(r * c) - p[k] * p[k]);
     }
 }
 
