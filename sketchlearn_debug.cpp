@@ -290,23 +290,15 @@ void find_possible_flows(int i, int j, int k, char *T) // 找到正则表达式�
     {
         char ans[(l + 7) / 8 + 1];
 
-        for (int ii = 0; ii < (l + 7) / 8; ii++)
+        for (int kk = 1; kk <= l; kk++)
         {
-            ans[ii] = 0;
-            for (int jj = 0; jj < 8; jj++)
-            {
-                if (current_T[8 * ii + jj + 1] == '1')
-                {
-                    ans[ii] |= (1 << (7 - jj));
-                }
-                else
-                {
-                    ans[ii] &= (~(1 << (7 - jj)));
-                }
-            }
+            set_bit((unsigned char *)ans, kk - 1, current_T[kk] == '1' ? 1 : 0);
         }
+
         ans[(l + 7) / 8] = '\0';
-        if (hash_function[i](ans) == j)
+        if (i == 1 && j == 57)
+            printf("V[%d][%d] before hash\n", i, j);
+        if (hash_function[i](ans) % c == j)
         {
             possible_flows.push_back(two_types_of_flow(current_T, ans));
         }
@@ -317,13 +309,19 @@ void find_possible_flows(int i, int j, int k, char *T) // 找到正则表达式�
         if (T[k] != '*')
         {
             current_T[k] = T[k];
+            if (i == 1 && j == 57)
+                printf("V[%d][%d] %d completed,is%c\n", i, j, k, current_T[k]);
             find_possible_flows(i, j, k + 1, T);
         }
         else
         {
             current_T[k] = '0';
+            if (i == 1 && j == 57)
+                printf("V[%d][%d] %d is *, = %c\n", i, j, k, current_T[k]);
             find_possible_flows(i, j, k + 1, T);
             current_T[k] = '1';
+            if (i == 1 && j == 57)
+                printf("V[%d][%d] %d is *, = %c\n", i, j, k, current_T[k]);
             find_possible_flows(i, j, k + 1, T);
         }
     }
@@ -517,8 +515,19 @@ bool my_cmp(char *s1, char *s2)
     return true;
 }
 
+void Flow_out(char* s)
+{
+    printf("ID: ");
+    for (size_t i = 0; i < ID_length; i++)
+    {
+        printf("%d ",s[i]);
+    }
+    printf("\n");
+}
+
 int main()
 {
+    freopen("out.txt", "w", stdout);
     if (0 == Read_Flowdata()) //流数据读入
     {
         // 赋予哈希函数
@@ -585,9 +594,31 @@ int main()
     }
 
 #ifdef DEBUG
+    map<ID_input, int> m;
+
+    for (int i = 0; i < all_id_flow.size(); i++)
+    {
+        m[all_id_flow[i]]++;
+    }
+
+    int threshold = 1000;
+
+    for (auto iter : m)
+    {
+        if (iter.second > threshold)
+        {
+            Flow_out((char*)(iter.first.x));
+            printf(" size: %d\n", iter.second);
+        }
+    }
+
+    printf("\n--------------------------------------------------------\n");
+
     for (int i = 0; i < F.size(); i++)
     {
-        printf("flow id: %s, size: %d\n", F[i].bit_flow, F[i].size);
+        Flow_out(F[i].flow);
+        printf("size: %d",F[i].size);
+        //printf("flow id: %s, size: %d\n", F[i].bit_flow, F[i].size);
         int actual = 0;
         for (int j = 0; j < all_id_flow.size(); j++)
         {
@@ -596,11 +627,12 @@ int main()
                 actual++;
             }
         }
-        printf("actual: %d\n", actual);
+        printf("  actual: %d\n", actual);
     }
 #endif // DEBUG
+    printf("\n########################################################\n");
 
-#ifdef DEBUG2
+#ifdef DEBUG
     {
         class flow_debug
         {
@@ -626,7 +658,7 @@ int main()
         flow_debug tmp;
         while (iter < Flow_sort.end())
         {
-            if (!((*iter) < tmp_flow) && !(tmp_flow < (*iter)))
+            if (my_cmp(tmp.f.x,iter->x))
             {
                 ++flow_size;
                 ++iter;
@@ -648,9 +680,10 @@ int main()
         sort(flow_queue.begin(), flow_queue.end());
         for (auto i : flow_queue)
         {
-            if (1 != i.s)
+            if (1500 < i.s)
             {
-                printf("%s appear  %d  times\n", i.f, i.s);
+                Flow_out(i.f.x);
+                printf("appear  %d  times\n",i.s);
             }
         }
         printf("\nDEBUG END!!!\n");

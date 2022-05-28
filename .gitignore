@@ -3,3 +3,6 @@ formatted00.dat
 
 # C++ running files
 *.exe
+
+#test output
+out.txt
