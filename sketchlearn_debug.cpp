@@ -41,7 +41,7 @@ public:
     }
     bool operator<(const ID_input &_f) const
     {
-        for (int i = 0; i < 26; i++)
+        for (int i = 0; i < ID_length; i++)
         {
             if (x[i] < _f.x[i])
             {
@@ -104,8 +104,8 @@ int Read_Flowdata()
 #ifndef SMALL_DATA
     sprintf(datafileName, "./formatted00.dat");
 #else
-    //sprintf(datafileName, "./data/0.dat");
-    sprintf(datafileName, "./data/all1.dat");
+    sprintf(datafileName, "./data/0.dat");
+    // sprintf(datafileName, "./data/all1.dat");
 #endif // !SMALL_DATA
 
     ID_input tmp_five_tuple;
@@ -149,6 +149,19 @@ int get_bit(unsigned char *a, int pos)
     else
     {
         return 1;
+    }
+}
+void set_bit(unsigned char *a, int pos, int v)
+{
+    int byte = pos / 8;
+    int bit = pos % 8;
+    if (v == 1)
+    {
+        a[byte] = a[byte] | (1 << (7 - bit));
+    }
+    else
+    {
+        a[byte] = a[byte] & ~(1 << (7 - bit));
     }
 }
 
@@ -284,11 +297,11 @@ void find_possible_flows(int i, int j, int k, char *T) // 找到正则表达式�
             {
                 if (current_T[8 * ii + jj + 1] == '1')
                 {
-                    ans[ii] |= (1 << jj);
+                    ans[ii] |= (1 << (7 - jj));
                 }
                 else
                 {
-                    ans[ii] &= (~(1 << jj));
+                    ans[ii] &= (~(1 << (7 - jj)));
                 }
             }
         }
@@ -491,6 +504,19 @@ bool Terminate()
     }
     return true;
 }
+
+bool my_cmp(char *s1, char *s2)
+{
+    for (size_t i = 0; i < ID_length; i++)
+    {
+        if (s1[i] != s2[i])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 int main()
 {
     if (0 == Read_Flowdata()) //流数据读入
@@ -523,6 +549,10 @@ int main()
         {
             for (int j = 1; j <= c; j++)
             {
+                if (0 == V[0][i][j])
+                {
+                    continue;
+                }
                 vector<ans_t> temp_F = ExtractLargeFlows(theta, i, j,
                                                          V, p, sigma);
                 if (!temp_F.empty())
@@ -544,7 +574,7 @@ int main()
         printf("%d loop is completed______________\n\n", nnnn);
         nnnn++;
 
-        if (nnnn > 10000)
+        if (nnnn > 10)
             break;
 
         if (Terminate())
@@ -555,6 +585,22 @@ int main()
     }
 
 #ifdef DEBUG
+    for (int i = 0; i < F.size(); i++)
+    {
+        printf("flow id: %s, size: %d\n", F[i].bit_flow, F[i].size);
+        int actual = 0;
+        for (int j = 0; j < all_id_flow.size(); j++)
+        {
+            if (my_cmp(all_id_flow[i].x, F[i].flow))
+            {
+                actual++;
+            }
+        }
+        printf("actual: %d\n", actual);
+    }
+#endif // DEBUG
+
+#ifdef DEBUG2
     {
         class flow_debug
         {
