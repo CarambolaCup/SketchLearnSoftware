@@ -565,10 +565,17 @@ void RemoveFlows(vector<ans_t> FF)
         }
     }
 }
+
+double MY_THETA_THRESHOLD = 1.0/(double)(1<<18);
+
 //检查当前sketch是否符合高斯分布
 //我理解的是所有L个sketch每一个都符合1sigma,2sigma,3sigma的数量要求
-bool Terminate()
+bool Terminate(double theta)
 {
+    double RATE1 = (theta < MY_THETA_THRESHOLD)? 0.68 : 0.6826;
+    double RATE2 = (theta < MY_THETA_THRESHOLD)? 0.95 : 0.9544;
+    double RATE3 = (theta < MY_THETA_THRESHOLD)? 0.99 : 0.9973;
+
     for (size_t k = 1; k <= ID_length * 8; k++)
     {
         size_t sigma_num1 = 0, sigma_num2 = 0, sigma_num3 = 0;
@@ -590,11 +597,11 @@ bool Terminate()
         double rate2 = (double)sigma_num2 / (double)(r * c);
         double rate3 = (double)sigma_num3 / (double)(r * c);
         printf("V[%d] rate1=%lf,rate2=%lf,rate3=%lf\n", (int)k, rate1, rate2, rate3);
-        if (rate1 < 0.6826)
+        if (rate1 < RATE1)
             return false;
-        if (rate2 < 0.9544)
+        if (rate2 < RATE2)
             return false;
-        if (rate3 < 0.9973)
+        if (rate3 < RATE3)
             return false;
     }
     return true;
@@ -664,6 +671,7 @@ int main()
     int nnnn = 1;
     while (1)
     {
+        int my_flow_num = 0;
         vector<ans_t> FF;
         for (int i = 1; i <= r; i++)
         {
@@ -677,6 +685,7 @@ int main()
                     V, p, sigma);
                 if (!temp_F.empty())
                 {
+                    my_flow_num++;
                     for (vector<ans_t>::iterator it = temp_F.begin(); it < temp_F.end(); it++)
                     {
                         bool temp_Fin = false;
@@ -694,7 +703,10 @@ int main()
                         if (!temp_Fin)
                             FF.push_back(*it);
                     }
-                    printf("\n");
+                    if(my_flow_num % 100 == 0)
+                    {
+                        printf("CAUGHT %d FLOWS!\n",my_flow_num);
+                    }
                 }
             }
         }
@@ -735,7 +747,7 @@ int main()
         if (nnnn > 10)
             break;
 
-        if (Terminate())
+        if (Terminate(theta))
             break;
         //没有找出大流，theta减半
         if (FF.empty())
