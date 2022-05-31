@@ -13,18 +13,21 @@ using namespace std;
 #pragma warning(disable : 4996)
 
 //#define FILEOUT
-//#define SMALL_DATA //小数据测试开关
+#define SMALL_DATA //小数据测试开关
 #define DEBUG
+//#define OVERALL_DEBUG //比较所有流
+#define LOCAL_DEBUG //比较捕获了的流
 
 // 兰佳晨
 // Encoded in CRLF UTF-8
 
 // 流键 13个byte
 // 时间戳 13个byte
-const int ID_length = 13;
 #ifndef SMALL_DATA
-const int TimeStamp_length = 13;
+const int ID_length = 8;
+const int TimeStamp_length = 8;
 #else
+const int ID_length = 13;
 const int TimeStamp_length = 0;
 #endif // !SMALL_DATA
 
@@ -63,9 +66,12 @@ public:
 };
 
 // 将l,r,c参数及hash函数提前,以方便使用
-const int l = 104;
+const int l = 8 * ID_length;
 const int r = 3;   // 2是我瞎写的
-const int c = 50000; // 100是我瞎写的
+const int c = 5000; // 100是我瞎写的
+
+const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // 如果估值高过最小sketch的这么多倍，则认为是假阳性
+const double MY_ERROR_THRESHOLD_V0 = 0.95; // 如果估值高过最小sketch的这么多倍，则认为是假阳性
 
 // h1,h2...,hr 下标从1开始
 uint32_t(*hash_function[r + 1])(char*);
@@ -116,10 +122,6 @@ int Read_Flowdata()
     // 注意文件路径
 #ifndef SMALL_DATA
     sprintf(datafileName, "./formatted00.dat"); 
-#else
-    sprintf(datafileName, "./data/0.dat");
-    // sprintf(datafileName, "./data/all1.dat");
-#endif // !SMALL_DATA
 
     ID_input tmp_five_tuple;
 
@@ -133,10 +135,6 @@ int Read_Flowdata()
             // 跳过时间戳
             fread(&tmp_five_tuple, TimeStamp_length, 1, fin);
             k_count++;
-            if (k_count > 10000000)
-            {
-                break;
-            }
         }
 
         fclose(fin);
@@ -152,6 +150,42 @@ int Read_Flowdata()
     {
         return -1;
     }
+#else
+    for(int kk = 0; kk <= 10; kk++)
+    {
+        sprintf(datafileName, "./data/%d.dat",kk);
+
+        ID_input tmp_five_tuple;
+
+        FILE* fin = fopen(datafileName, "rb");
+        if (NULL != fin)
+        {
+            int k_count = 0;
+            while (fread(&tmp_five_tuple, ID_length, 1, fin)) // 读13byte
+            {
+                all_id_flow.push_back(tmp_five_tuple);
+                // 跳过时间戳
+                fread(&tmp_five_tuple, TimeStamp_length, 1, fin);
+                k_count++;
+            }
+
+            fclose(fin);
+
+    #ifdef DEBUG
+            // 约 2000 0000
+            int test_a = all_id_flow.size();
+            printf("READ %d FLOWS, %d TIMES\n",test_a, kk);
+    #endif // DEBUG
+
+        }
+        else
+        {
+            return -1;
+        }
+    }
+    return 0;
+    // sprintf(datafileName, "./data/all1.dat");
+#endif // !SMALL_DATA
 }
 
 //使用了大端法
@@ -480,24 +514,59 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     for (vector<two_types_of_flow>::iterator item = possible_flows.begin();
         item != possible_flows.end(); item++)
     {
+        int min_sketch = 0xfffffff;
         for (int k = 1; k <= l; k++)
         {
             if (item->bit_flow[k] == '1')
             {
+                min_sketch = (V[k][i][j] < min_sketch)? V[k][i][j] : min_sketch;
                 double r = (double)V[k][i][j] / V[0][i][j];
                 estimated_frequency[k] = ((r - p[k]) / (1 - p[k])) * V[0][i][j];
                 estimated_p[k] = hat_p[k];
             }
             else
             {
+                min_sketch = (V[0][i][j] - V[k][i][j] < min_sketch)? V[0][i][j] - V[k][i][j] : min_sketch;
                 double r = (double)V[k][i][j] / V[0][i][j];
                 estimated_frequency[k] = (1 - r / p[k]) * V[0][i][j];
+
                 estimated_p[k] = 1 - hat_p[k];
             }
         }
         sort(estimated_frequency + 1, estimated_frequency + 1 + l);
+        double ans_estimated_frequency = estimated_frequency[l / 2];
+        if(ans_estimated_frequency > min_sketch)
+        {
+            if(ans_estimated_frequency > MY_ERROR_THRESHOLD_SKETCH * min_sketch && 
+               ans_estimated_frequency > MY_ERROR_THRESHOLD_V0 * V[0][i][j])
+            {
+                break;
+            }
+            ans_estimated_frequency = min_sketch;
+            /*
+            printf("ESTIMATED LARGER THAN MIN SKETCH! ESTIMATED: %lf, MIN: %d, V0: %d\n", ans_estimated_frequency, min_sketch, V[0][i][j]);
+            ans_estimated_frequency = min_sketch;
+            */
+
+            /*
+            int flag = 0;
+            for (auto iter : all_id_flow)
+            {
+                if (my_cmp(iter.x, item->flow))
+                {
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag == 0)
+            {
+                printf("----------------NOT IN!-------------\n");
+                printf("T: %s\n", T);
+            }
+            */
+        }
         //Flow_out(item->flow);
-        result.push_back(ans_t(item->bit_flow, item->flow, estimated_frequency[l / 2], estimated_p));
+        result.push_back(ans_t(item->bit_flow, item->flow, ans_estimated_frequency, estimated_p));
         //Flow_out(result.back().flow);
     }
     // printf("V[%d][%d] step 3 completed\n", i, j);
@@ -572,9 +641,10 @@ double MY_THETA_THRESHOLD = 1.0/(double)(1<<18);
 //我理解的是所有L个sketch每一个都符合1sigma,2sigma,3sigma的数量要求
 bool Terminate(double theta)
 {
-    double RATE1 = (theta < MY_THETA_THRESHOLD)? 0.68 : 0.6826;
-    double RATE2 = (theta < MY_THETA_THRESHOLD)? 0.95 : 0.9544;
-    double RATE3 = (theta < MY_THETA_THRESHOLD)? 0.99 : 0.9973;
+    double STEP = 0.005;
+    double RATE1 = 0.6826 + STEP * log2(theta);
+    double RATE2 = 0.9544 + STEP * log2(theta);
+    double RATE3 = 0.9973 + STEP * log2(theta);
 
     for (size_t k = 1; k <= ID_length * 8; k++)
     {
@@ -591,6 +661,10 @@ bool Terminate(double theta)
                 if (r <= p[k] + 1.0 * sigma[k] && r >= p[k] - 1.0 * sigma[k])
                     sigma_num1++;
             }
+        }
+        if(sigma_num1 == 0 && sigma_num2 == 0 && sigma_num3 == 0)
+        {
+            printf("I WONDER WHY PROGRAME RUNNING REACH HERE\n");
         }
         printf("V[%d] sigma1_num=%d,sigma2_num=%d,sigma3_num=%d\n", (int)k, (int)sigma_num1, (int)sigma_num2, (int)sigma_num3);
         double rate1 = (double)sigma_num1 / (double)(r * c);
@@ -741,11 +815,12 @@ int main()
             printf("RemoveFlowscompleted\n");
             Sketch2N_p_sigma();
         }
-        printf("%d loop is completed______________\n\n", nnnn);
+        printf("%d loop is completed______________, theta = %lf\n\n", nnnn, theta);
         nnnn++;
-
+        /*
         if (nnnn > 10)
             break;
+        */
 
         if (Terminate(theta))
             break;
@@ -755,40 +830,14 @@ int main()
     }
 
 #ifdef DEBUG
-    map<ID_input, two_int> m;
-
-    for (int i = 0; i < all_id_flow.size(); i++)
-    {
-        m[all_id_flow[i]].i1++;
-    }
 
     int threshold = 1000;
-
-    for (int i = 0; i < F.size(); i++)
-    {
-        ID_input x;
-        for (int j = 0; j <= ID_length; j++)
-        {
-            x.x[j] = F[i].flow[j];
-        }
-        m[x].i2 = F[i].size;
-    }
-
-    for (auto iter : m)
-    {
-        if (iter.second.i1 > threshold || iter.second.i2 > threshold)
-        {
-            Flow_out((char*)(iter.first.x));
-            printf(" size actual: %d, size sketch: %d, ratio: %lf\n", iter.second.i1,
-                iter.second.i2, (iter.second.i1 == 0)? 0: (double)iter.second.i2/iter.second.i1);
-        }
-    }
 
     printf("\n--------------------------------------------------------\n");
 #endif // DEBUG
     printf("\n########################################################\n");
 
-#ifdef DEBUG2
+#ifdef DEBUG
     {
         class flow_debug
         {
@@ -800,9 +849,12 @@ int main()
                 return (s < _flow.s);
             }
         };
-        vector<flow_debug> flow_queue;
+        map<ID_input, two_int> flow_queue;
         vector<ID_input> Flow_sort = all_id_flow;
+        printf("SORT BEGIN!\n");
         sort(Flow_sort.begin(), Flow_sort.end());
+        printf("SORT END!\n");
+        printf("NEED %d LOOPS\n",Flow_sort.size());
         ID_input tmp_flow;
         uint32_t flow_size;
         auto iter = Flow_sort.begin();
@@ -811,36 +863,50 @@ int main()
         flow_size = 1;
         ++iter;
 
+        int loop_time = 0;
+
         flow_debug tmp;
         while (iter < Flow_sort.end())
         {
             if (my_cmp(tmp.f.x, iter->x))
             {
                 ++flow_size;
-                ++iter;
             }
             else
             {
-
                 tmp.f = tmp_flow;
-                tmp.s = flow_size;
-                flow_queue.push_back(tmp);
+                tmp.s = flow_size; 
+                if(flow_size > threshold)
+                    flow_queue[tmp.f].i1 = tmp.s;
                 tmp_flow = *iter;
                 flow_size = 1;
-                ++iter;
+            }
+            ++iter;
+            loop_time ++;
+            if(loop_time % 100000 == 0)
+            {
+                printf("LOOP %d TIMES!\n",loop_time);
+                printf("FLOW QUEUE LENGTH: %d\n",flow_queue.size());
             }
         }
-        tmp.f = tmp_flow;
-        tmp.s = flow_size;
-        flow_queue.push_back(tmp);
-        sort(flow_queue.begin(), flow_queue.end());
+        flow_queue[tmp.f].i1 = flow_size;
+        for(auto item : F)
+        {
+            if(item.size>threshold)
+            {
+                ID_input x;
+                for(int i=0;i<=ID_length;i++)
+                {
+                    x.x[i]=item.flow[i];
+                }
+                flow_queue[x].i2 = item.size;
+                flow_queue[x].ratio = (double)flow_queue[x].i1/flow_queue[x].i2;
+            }
+        }
         for (auto i : flow_queue)
         {
-            if (1500 < i.s)
-            {
-                Flow_out(i.f.x);
-                printf("appear  %d  times\n", i.s);
-            }
+            //Flow_out(i.first);
+            printf("appear  %d  times, SKETCH CATCH %d TIMES, RATIO: %lf\n", i.second.i1, i.second.i2, i.second.ratio);
         }
         printf("\nDEBUG END!!!\n");
     }
