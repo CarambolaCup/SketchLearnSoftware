@@ -31,6 +31,8 @@ const int ID_length = 13;
 const int TimeStamp_length = 0;
 #endif // !SMALL_DATA
 
+const int DATA_FILE_NUM = 10;
+
 bool my_cmp(char*, char*);
 void Flow_out(char* s);
 
@@ -151,7 +153,7 @@ int Read_Flowdata()
         return -1;
     }
 #else
-    for(int kk = 0; kk <= 10; kk++)
+    for(int kk = 0; kk <= DATA_FILE_NUM; kk++)
     {
         sprintf(datafileName, "./data/%d.dat",kk);
 
@@ -641,7 +643,7 @@ double MY_THETA_THRESHOLD = 1.0/(double)(1<<18);
 //我理解的是所有L个sketch每一个都符合1sigma,2sigma,3sigma的数量要求
 bool Terminate(double theta)
 {
-    double STEP = 0.005;
+    double STEP = 0.001;
     double RATE1 = 0.6826 + STEP * log2(theta);
     double RATE2 = 0.9544 + STEP * log2(theta);
     double RATE3 = 0.9973 + STEP * log2(theta);
@@ -831,7 +833,7 @@ int main()
 
 #ifdef DEBUG
 
-    int threshold = 1000;
+    int threshold = 4000;
 
     printf("\n--------------------------------------------------------\n");
 #endif // DEBUG
@@ -876,8 +878,7 @@ int main()
             {
                 tmp.f = tmp_flow;
                 tmp.s = flow_size; 
-                if(flow_size > threshold)
-                    flow_queue[tmp.f].i1 = tmp.s;
+                flow_queue[tmp.f].i1 = tmp.s;
                 tmp_flow = *iter;
                 flow_size = 1;
             }
@@ -892,21 +893,21 @@ int main()
         flow_queue[tmp.f].i1 = flow_size;
         for(auto item : F)
         {
-            if(item.size>threshold)
+            ID_input x;
+            for(int i=0;i<=ID_length;i++)
             {
-                ID_input x;
-                for(int i=0;i<=ID_length;i++)
-                {
-                    x.x[i]=item.flow[i];
-                }
-                flow_queue[x].i2 = item.size;
-                flow_queue[x].ratio = (double)flow_queue[x].i1/flow_queue[x].i2;
+                x.x[i]=item.flow[i];
             }
+            flow_queue[x].i2 = item.size;
+            flow_queue[x].ratio = (double)flow_queue[x].i1/flow_queue[x].i2;
         }
         for (auto i : flow_queue)
         {
-            //Flow_out(i.first);
-            printf("appear  %d  times, SKETCH CATCH %d TIMES, RATIO: %lf\n", i.second.i1, i.second.i2, i.second.ratio);
+            if(i.second.i1 > threshold || i.second.i2 > threshold)
+            {
+                //Flow_out(i.first);
+                printf("appear  %d  times, SKETCH CATCH %d TIMES, RATIO: %lf\n", i.second.i1, i.second.i2, i.second.ratio);
+            }
         }
         printf("\nDEBUG END!!!\n");
     }
