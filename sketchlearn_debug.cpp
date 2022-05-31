@@ -17,6 +17,10 @@ using namespace std;
 #define DEBUG
 //#define OVERALL_DEBUG //比较所有流
 #define LOCAL_DEBUG //比较捕获了的流
+//#define PRINT_RESULT //是否输出完整结果
+//#define PRINT_LOOP_TIMES//最后输出loop的次数
+//#define PRINT_TERMINATE_DATA//输出TERMINATE的数据
+//#define PRINT_CAUGHT_FLOW_NUM//每捕获100个流输出一条消息
 
 // 兰佳晨
 // Encoded in CRLF UTF-8
@@ -31,13 +35,22 @@ const int ID_length = 13;
 const int TimeStamp_length = 0;
 #endif // !SMALL_DATA
 
+//---------------------   在此调参   --------------------------//
+
 const int DATA_FILE_NUM = 10;// 要读的文件个数
-double POSSIBLE_THRESHOLD = 0.95;// hat_p的阈值，论文里提供的是0.99
+double POSSIBLE_THRESHOLD = 0.99;// hat_p的阈值，论文里提供的是0.99
 const int STAR_THRESHOLD = 11;// 如果一个正则表达式中超过了这么多个*，我们认为没有大流
 int THRESHOLD = 4000;// 展示超过这么大的记录到的流
 
-const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // 如果估值高过最小sketch的这么多倍，则认为是假阳性
-const double MY_ERROR_THRESHOLD_V0 = 0.95; // 如果估值高过最小sketch的这么多倍，则认为是假阳性
+const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
+const double MY_ERROR_THRESHOLD_V0 = 0.95; // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
+
+// 将l,r,c参数及hash函数提前,以方便使用
+const int l = 8 * ID_length;// 流的bit数
+const int r = 3;   // sketch的行数
+const int c = 5000; // sketch的列数
+
+//---------------------   在此调参   --------------------------//
 
 bool my_cmp(char*, char*);
 void Flow_out(char* s);
@@ -72,11 +85,6 @@ public:
         return false;
     }
 };
-
-// 将l,r,c参数及hash函数提前,以方便使用
-const int l = 8 * ID_length;
-const int r = 3;   // 2是我瞎写的
-const int c = 5000; // 100是我瞎写的
 
 // h1,h2...,hr 下标从1开始
 uint32_t(*hash_function[r + 1])(char*);
@@ -666,11 +674,13 @@ bool Terminate(double theta)
         {
             printf("I WONDER WHY PROGRAME RUNNING REACH HERE\n");
         }
-        printf("V[%d] sigma1_num=%d,sigma2_num=%d,sigma3_num=%d\n", (int)k, (int)sigma_num1, (int)sigma_num2, (int)sigma_num3);
         double rate1 = (double)sigma_num1 / (double)(r * c);
         double rate2 = (double)sigma_num2 / (double)(r * c);
         double rate3 = (double)sigma_num3 / (double)(r * c);
+        #ifdef PRINT_TERMINATE_DATA
+        printf("V[%d] sigma1_num=%d,sigma2_num=%d,sigma3_num=%d\n", (int)k, (int)sigma_num1, (int)sigma_num2, (int)sigma_num3);
         printf("V[%d] rate1=%lf,rate2=%lf,rate3=%lf\n", (int)k, rate1, rate2, rate3);
+        #endif// PRINT_TERMINATE_DATA
         if (rate1 < RATE1)
             return false;
         if (rate2 < RATE2)
@@ -777,10 +787,12 @@ int main()
                         if (!temp_Fin)
                             FF.push_back(*it);
                     }
+                    #ifdef PRINT_CAUGHT_FLOW_NUM
                     if(my_flow_num % 100 == 0)
                     {
                         printf("CAUGHT %d FLOWS!\n",my_flow_num);
                     }
+                    #endif
                 }
             }
         }
@@ -880,11 +892,13 @@ int main()
             }
             ++iter;
             loop_time ++;
+            #ifdef PRINT_LOOP_TIMES
             if(loop_time % 100000 == 0)
             {
                 printf("LOOP %d TIMES!\n",loop_time);
                 printf("FLOW QUEUE LENGTH: %d\n",flow_queue.size());
             }
+            #endif// PRINT_LOOP_TIMES
         }
         flow_queue[tmp.f].i1 = flow_size;
         for(auto item : F)
@@ -897,15 +911,22 @@ int main()
             flow_queue[x].i2 = item.size;
             flow_queue[x].ratio = (double)flow_queue[x].i1/flow_queue[x].i2;
         }
+        double error_rate = 0;
         for (auto i : flow_queue)
         {
             if(i.second.i1 > THRESHOLD || i.second.i2 > THRESHOLD)
             {
                 //Flow_out(i.first);
-                printf("appear  %d  times, SKETCH CATCH %d TIMES, RATIO: %lf\n", i.second.i1, i.second.i2, i.second.ratio);
+                #ifdef PRINT_RESULT
+                    printf("appear  %d  times, SKETCH CATCH %d TIMES, RATIO: %lf\n", i.second.i1, i.second.i2, i.second.ratio);
+                #endif// PRINT_RESULT
+                error_rate += i.second.i1 * (i.second.ratio - 1.0) * (i.second.ratio - 1.0);
             }
         }
-        printf("\nDEBUG END!!!\n");
+        
+        printf("\nDEBUG END!!! \nTHRESHOLD: %d\nERROR RATIO: %lf\nPOSSIBLE_THRESHOLD: %lf\nSTAR_THRESHOLD: %d\nMY_ERROR_THRESHOLD_SKETCH: %lf\nMY_ERROR_THRESHOLD_V0: %lf\nSKETCH LENGTH: %d, HEIGHT: %d, WIDTH: %d\n",
+               THRESHOLD,error_rate,POSSIBLE_THRESHOLD,STAR_THRESHOLD,MY_ERROR_THRESHOLD_SKETCH,MY_ERROR_THRESHOLD_V0, l, r, c);
+        return 0;
     }
 #endif // DEBUG
     return 0;
