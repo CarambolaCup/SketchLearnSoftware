@@ -38,9 +38,10 @@ const int TimeStamp_length = 0;
 //---------------------   在此调参   --------------------------//
 
 const int DATA_FILE_NUM = 10;// 要读的文件个数
+int THRESHOLD = 4000;// 展示超过这么大的记录到的流
+
 double POSSIBLE_THRESHOLD = 0.99;// hat_p的阈值，论文里提供的是0.99
 const int STAR_THRESHOLD = 11;// 如果一个正则表达式中超过了这么多个*，我们认为没有大流
-int THRESHOLD = 4000;// 展示超过这么大的记录到的流
 
 const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
 const double MY_ERROR_THRESHOLD_V0 = 0.95; // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
