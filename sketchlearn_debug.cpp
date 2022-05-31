@@ -19,12 +19,19 @@ using namespace std;
 // 兰佳晨
 // Encoded in CRLF UTF-8
 
+
+// 大数据中
+// 流键 8个byte
+// 时间戳 8个byte
+// 小数据中
 // 流键 13个byte
-// 时间戳 13个byte
-const int ID_length = 13;
+// 时间戳 0个byte
+
 #ifndef SMALL_DATA
-const int TimeStamp_length = 13;
+const int ID_length = 8;
+const int TimeStamp_length = 8;
 #else
+const int ID_length = 13;
 const int TimeStamp_length = 0;
 #endif // !SMALL_DATA
 
@@ -127,7 +134,7 @@ int Read_Flowdata()
     if (NULL != fin)
     {
         int k_count = 0;
-        while (fread(&tmp_five_tuple, ID_length, 1, fin)) // 读13byte
+        while (fread(&tmp_five_tuple, ID_length, 1, fin))
         {
             all_id_flow.push_back(tmp_five_tuple);
             // 跳过时间戳
