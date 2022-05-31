@@ -13,7 +13,7 @@ using namespace std;
 #pragma warning(disable : 4996)
 
 //#define FILEOUT
-#define SMALL_DATA //小数据测试开关
+//#define SMALL_DATA //小数据测试开关
 #define DEBUG
 //#define OVERALL_DEBUG //比较所有流
 #define LOCAL_DEBUG //比较捕获了的流
@@ -31,7 +31,13 @@ const int ID_length = 13;
 const int TimeStamp_length = 0;
 #endif // !SMALL_DATA
 
-const int DATA_FILE_NUM = 10;
+const int DATA_FILE_NUM = 10;// 要读的文件个数
+double POSSIBLE_THRESHOLD = 0.95;// hat_p的阈值，论文里提供的是0.99
+const int STAR_THRESHOLD = 11;// 如果一个正则表达式中超过了这么多个*，我们认为没有大流
+int THRESHOLD = 4000;// 展示超过这么大的记录到的流
+
+const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // 如果估值高过最小sketch的这么多倍，则认为是假阳性
+const double MY_ERROR_THRESHOLD_V0 = 0.95; // 如果估值高过最小sketch的这么多倍，则认为是假阳性
 
 bool my_cmp(char*, char*);
 void Flow_out(char* s);
@@ -71,9 +77,6 @@ public:
 const int l = 8 * ID_length;
 const int r = 3;   // 2是我瞎写的
 const int c = 5000; // 100是我瞎写的
-
-const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // 如果估值高过最小sketch的这么多倍，则认为是假阳性
-const double MY_ERROR_THRESHOLD_V0 = 0.95; // 如果估值高过最小sketch的这么多倍，则认为是假阳性
 
 // h1,h2...,hr 下标从1开始
 uint32_t(*hash_function[r + 1])(char*);
@@ -131,11 +134,11 @@ int Read_Flowdata()
     if (NULL != fin)
     {
         int k_count = 0;
-        while (fread(&tmp_five_tuple, ID_length, 1, fin)) // 读13byte
+        while (fread(&tmp_five_tuple, TimeStamp_length, 1, fin)) // 读8byte
         {
-            all_id_flow.push_back(tmp_five_tuple);
             // 跳过时间戳
-            fread(&tmp_five_tuple, TimeStamp_length, 1, fin);
+            fread(&tmp_five_tuple, ID_length, 1, fin);
+            all_id_flow.push_back(tmp_five_tuple);
             k_count++;
         }
 
@@ -166,8 +169,6 @@ int Read_Flowdata()
             while (fread(&tmp_five_tuple, ID_length, 1, fin)) // 读13byte
             {
                 all_id_flow.push_back(tmp_five_tuple);
-                // 跳过时间戳
-                fread(&tmp_five_tuple, TimeStamp_length, 1, fin);
                 k_count++;
             }
 
@@ -390,7 +391,7 @@ void find_possible_flows(int i, int j, int k, char* T) // 找到正则表达式�
 {
     if (k == l + 1)
     {
-        if ((loop_num++) % 10000 == 0 && loop_num > 100000)
+        if ((++loop_num) % 15000 == 0 && loop_num > 15000)
         {
             printf("%d stars: LOOP %d TIMES!\n", num_of_star, loop_num);
         }
@@ -471,11 +472,11 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     char T[l + 2];
     for (int k = 1; k <= l; k++)
     {
-        if (hat_p[k] > 0.99)
+        if (hat_p[k] > POSSIBLE_THRESHOLD)
         {
             T[k] = '1';
         }
-        else if (1 - hat_p[k] > 0.99)
+        else if (1 - hat_p[k] > POSSIBLE_THRESHOLD)
         {
             T[k] = '0';
         }
@@ -495,9 +496,8 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
             num_of_star++;
         }
     }
-    //printf("There are %d stars\n", num_of_star);
     vector<ans_t> result;
-    if (num_of_star > 15)
+    if (num_of_star > STAR_THRESHOLD)
     {
         return result;
         for (int k = 1; k <= l; k++)
@@ -637,13 +637,11 @@ void RemoveFlows(vector<ans_t> FF)
     }
 }
 
-double MY_THETA_THRESHOLD = 1.0/(double)(1<<18);
-
 //检查当前sketch是否符合高斯分布
 //我理解的是所有L个sketch每一个都符合1sigma,2sigma,3sigma的数量要求
 bool Terminate(double theta)
 {
-    double STEP = 0.001;
+    double STEP = 0.005;
     double RATE1 = 0.6826 + STEP * log2(theta);
     double RATE2 = 0.9544 + STEP * log2(theta);
     double RATE3 = 0.9973 + STEP * log2(theta);
@@ -833,8 +831,6 @@ int main()
 
 #ifdef DEBUG
 
-    int threshold = 4000;
-
     printf("\n--------------------------------------------------------\n");
 #endif // DEBUG
     printf("\n########################################################\n");
@@ -903,7 +899,7 @@ int main()
         }
         for (auto i : flow_queue)
         {
-            if(i.second.i1 > threshold || i.second.i2 > threshold)
+            if(i.second.i1 > THRESHOLD || i.second.i2 > THRESHOLD)
             {
                 //Flow_out(i.first);
                 printf("appear  %d  times, SKETCH CATCH %d TIMES, RATIO: %lf\n", i.second.i1, i.second.i2, i.second.ratio);
