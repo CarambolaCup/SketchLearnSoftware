@@ -12,7 +12,7 @@
 using namespace std;
 #pragma warning(disable : 4996)
 
-//#define FILEOUT
+#define FILEOUT
 //#define SMALL_DATA //小数据测试开关
 #define DEBUG
 
@@ -133,10 +133,10 @@ int Read_Flowdata()
             // 跳过时间戳
             fread(&tmp_five_tuple, TimeStamp_length, 1, fin);
             k_count++;
-            if (k_count > 10000000)
-            {
-                break;
-            }
+            // if (k_count > 10000000)
+            // {
+            //     break;
+            // }
         }
 
         fclose(fin);
@@ -732,8 +732,8 @@ int main()
         printf("%d loop is completed______________\n\n", nnnn);
         nnnn++;
 
-        if (nnnn > 10)
-            break;
+        // if (nnnn > 10)
+        //     break;
 
         if (Terminate())
             break;
