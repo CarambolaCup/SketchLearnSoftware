@@ -117,7 +117,6 @@ uint32_t test_hash_2(char *f)
     return AwareHash((unsigned char *)f, ID_length, 654289577, 654289631, 2354289697) % c + 1;
 }
 
-
 // double eta = 4.7875; 会导致大于10000 agree 的流被驱逐
 double eta = 4.8000;
 struct flow_tin
@@ -127,7 +126,7 @@ struct flow_tin
     uint32_t disagree;
     bool ex;
 } heavy_flow[r + 1][c + 1];
-bool heavy_flag[r+1][c+1];
+bool heavy_flag[r + 1][c + 1];
 
 vector<ID_input> all_id_flow;
 // 按V[k][i][j]排列 k = 0 为总的层 i j 都从1开始
@@ -175,9 +174,9 @@ void Insert_Flow(ID_input f)
                 else
                 {
                     if (heavy_flow[i][h[i]].agree > 10000)
-                {
-                    printf("flow > 10000 but it is expel\n");
-                }
+                    {
+                        printf("flow > 10000 but it is expel\n");
+                    }
                     for (size_t i = 0; i < heavy_flow[i][h[i]].agree; i++)
                     {
                         all_id_flow.push_back(heavy_flow[i][h[i]].f);
@@ -815,6 +814,28 @@ int main()
 
     // F为所有大流集合，FF为每次循环找出的大流集合
     vector<ans_t> F;
+
+    // 加入heavy_flow
+    {
+        char tmp_bit_flow[l + 2];
+        double tmp_prob_vector[l + 2];
+        for (size_t k = 0; k <= l; k++)
+        {
+            tmp_prob_vector[k] = 1;
+        }
+        for (size_t i = 0; i < r; i++)
+        {
+            for (size_t j = 0; j < c; j++)
+            {
+                for (size_t k = 1; k <= l; k++)
+                {
+                    tmp_bit_flow[k] = get_bit((unsigned char*)heavy_flow[i][j].f,k-1);
+                }
+                
+                F.push_back(ans_t(tmp_bit_flow,heavy_flow[i][j].f,heavy_flow[i][j].agree,tmp_prob_vector));
+            }
+        }
+    }
     double theta = 0.5;
     int nnnn = 1;
     while (1)
