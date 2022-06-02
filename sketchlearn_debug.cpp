@@ -117,20 +117,17 @@ uint32_t test_hash_2(char *f)
     return AwareHash((unsigned char *)f, ID_length, 654289577, 654289631, 2354289697) % c + 1;
 }
 
-const int heavy_hitter_num = 50;
-uint32_t heavy_hash(char *f)
-{
-    return AwareHash((unsigned char *)f, ID_length, 125646149, 125646203, 1525646207) % heavy_hitter_num;
-}
+
+// double eta = 4.7875; 会导致大于10000 agree 的流被驱逐
+double eta = 4.8000;
 struct flow_tin
 {
     ID_input f;
     uint32_t agree;
     uint32_t disagree;
     bool ex;
-} heavy_flow[heavy_hitter_num];
-
-bool heavy_flag[heavy_hitter_num];
+} heavy_flow[r + 1][c + 1];
+bool heavy_flag[r+1][c+1];
 
 vector<ID_input> all_id_flow;
 // 按V[k][i][j]排列 k = 0 为总的层 i j 都从1开始
@@ -145,38 +142,51 @@ double sigma_initial[l + 1];
 
 void Insert_Flow(ID_input f)
 {
-    int h = heavy_hash(f);
-    if (0 == heavy_flag[h])
+    int h[r + 1];
+    for (size_t i = 1; i <= r; i++)
     {
-        heavy_flow[h].f = f;
-        heavy_flow[h].agree = 1;
-        heavy_flow[h].ex = false;
-        heavy_flow[h].disagree = 0;
-        heavy_flag[h] = 1;
-    }
-    else
-    {
-        if (my_cmp(f.x, heavy_flow[h].f.x))
+        h[i] = hash_function[i](f);
+
+        if (0 == heavy_flag[i][h[i]])
         {
-            heavy_flow[h].agree += 1;
+            heavy_flow[i][h[i]].f = f;
+            heavy_flow[i][h[i]].agree = 1;
+            heavy_flow[i][h[i]].ex = false;
+            heavy_flow[i][h[i]].disagree = 0;
+            heavy_flag[i][h[i]] = 1;
         }
         else
         {
-            heavy_flow[h].disagree += 1;
-            if (heavy_flow[h].disagree <= heavy_flow[h].agree)
+            if (my_cmp(f.x, heavy_flow[i][h[i]].f.x))
             {
-                all_id_flow.push_back(f);
+                heavy_flow[i][h[i]].agree += 1;
+                // if (heavy_flow[i][h[i]].agree > 10000)
+                // {
+                //     printf("flow > 10000\n");
+                // }
             }
             else
             {
-                for (size_t i = 0; i < heavy_flow[h].agree; i++)
+                heavy_flow[i][h[i]].disagree += 1;
+                if (((double)heavy_flow[i][h[i]].disagree / (double)heavy_flow[i][h[i]].agree) < eta)
                 {
-                    all_id_flow.push_back(heavy_flow[h].f);
+                    all_id_flow.push_back(f);
                 }
-                heavy_flow[h].f = f;
-                heavy_flow[h].agree = 1;
-                heavy_flow[h].ex = true;
-                heavy_flow[h].disagree = 1;
+                else
+                {
+                    if (heavy_flow[i][h[i]].agree > 10000)
+                {
+                    printf("flow > 10000 but it is expel\n");
+                }
+                    for (size_t i = 0; i < heavy_flow[i][h[i]].agree; i++)
+                    {
+                        all_id_flow.push_back(heavy_flow[i][h[i]].f);
+                    }
+                    heavy_flow[i][h[i]].f = f;
+                    heavy_flow[i][h[i]].agree = 1;
+                    heavy_flow[i][h[i]].ex = true;
+                    heavy_flow[i][h[i]].disagree = 1;
+                }
             }
         }
     }
@@ -778,13 +788,14 @@ int main()
 {
 #ifdef FILEOUT
     freopen("out.txt", "w", stdout);
-#endif                        // FILEOUT
+#endif // FILEOUT
+
+    // 赋予哈希函数
+    hash_function[1] = test_hash_0;
+    hash_function[2] = test_hash_1;
+    hash_function[3] = test_hash_2;
     if (0 == Read_Flowdata()) //流数据读入
     {
-        // 赋予哈希函数
-        hash_function[1] = test_hash_0;
-        hash_function[2] = test_hash_1;
-        hash_function[3] = test_hash_2;
         // 流转sketch
         Flow2Sketch();
         // sketch 生成N(p,sigma)
