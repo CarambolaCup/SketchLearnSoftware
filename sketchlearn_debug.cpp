@@ -16,8 +16,8 @@ using namespace std;
 //#define SMALL_DATA //小数据测试开关
 #define DEBUG
 //#define OVERALL_DEBUG //比较所有流
-#define LOCAL_DEBUG //比较捕获了的流
-//#define PRINT_RESULT //是否输出完整结果
+#define LOCAL_DEBUG  //比较捕获了的流
+#define PRINT_RESULT //是否输出完整结果
 //#define PRINT_LOOP_TIMES//最后输出loop的次数
 //#define PRINT_TERMINATE_DATA//输出TERMINATE的数据
 //#define PRINT_CAUGHT_FLOW_NUM//每捕获100个流输出一条消息
@@ -119,6 +119,7 @@ uint32_t test_hash_2(char *f)
 
 // double eta = 4.7875; 会导致大于10000 agree 的流被驱逐
 double eta = 4.8000;
+// double eta = 1;
 struct flow_tin
 {
     ID_input f;
@@ -129,6 +130,7 @@ struct flow_tin
 bool heavy_flag[r + 1][c + 1];
 
 vector<ID_input> all_id_flow;
+vector<ID_input> smaller_id_flow;
 // 按V[k][i][j]排列 k = 0 为总的层 i j 都从1开始
 unsigned int V[l + 1][r + 1][c + 1];
 unsigned int V_initial[l + 1][r + 1][c + 1];
@@ -146,13 +148,13 @@ void Insert_Flow(ID_input f)
     {
         h[i] = hash_function[i](f);
 
-        if (0 == heavy_flag[i][h[i]])
+        if (false == heavy_flag[i][h[i]])
         {
             heavy_flow[i][h[i]].f = f;
             heavy_flow[i][h[i]].agree = 1;
             heavy_flow[i][h[i]].ex = false;
             heavy_flow[i][h[i]].disagree = 0;
-            heavy_flag[i][h[i]] = 1;
+            heavy_flag[i][h[i]] = true;
         }
         else
         {
@@ -169,7 +171,7 @@ void Insert_Flow(ID_input f)
                 heavy_flow[i][h[i]].disagree += 1;
                 if (((double)heavy_flow[i][h[i]].disagree / (double)heavy_flow[i][h[i]].agree) < eta)
                 {
-                    all_id_flow.push_back(f);
+                    smaller_id_flow.push_back(f);
                 }
                 else
                 {
@@ -179,7 +181,7 @@ void Insert_Flow(ID_input f)
                     }
                     for (size_t i = 0; i < heavy_flow[i][h[i]].agree; i++)
                     {
-                        all_id_flow.push_back(heavy_flow[i][h[i]].f);
+                        smaller_id_flow.push_back(heavy_flow[i][h[i]].f);
                     }
                     heavy_flow[i][h[i]].f = f;
                     heavy_flow[i][h[i]].agree = 1;
@@ -210,6 +212,7 @@ int Read_Flowdata()
             // 跳过时间戳
             fread(&tmp_five_tuple, ID_length, 1, fin);
             Insert_Flow(tmp_five_tuple);
+            all_id_flow.push_back(tmp_five_tuple);
             k_count++;
         }
 
@@ -217,7 +220,7 @@ int Read_Flowdata()
 
 #ifdef DEBUG
         // 约 2000 0000
-        int test_a = all_id_flow.size();
+        int test_a = smaller_id_flow.size();
 #endif // DEBUG
 
         return 0;
@@ -239,7 +242,7 @@ int Read_Flowdata()
             int k_count = 0;
             while (fread(&tmp_five_tuple, ID_length, 1, fin)) // 读13byte
             {
-                all_id_flow.push_back(tmp_five_tuple);
+                smaller_id_flow.push_back(tmp_five_tuple);
                 k_count++;
             }
 
@@ -247,7 +250,7 @@ int Read_Flowdata()
 
 #ifdef DEBUG
             // 约 2000 0000
-            int test_a = all_id_flow.size();
+            int test_a = smaller_id_flow.size();
             printf("READ %d FLOWS, %d TIMES\n", test_a, kk);
 #endif // DEBUG
         }
@@ -292,7 +295,8 @@ void set_bit(unsigned char *a, int pos, int v)
 void Flow2Sketch()
 {
     uint32_t tmp_hash[r + 1];
-    for (ID_input tmp_flow : all_id_flow)
+    for (ID_input tmp_flow : smaller_id_flow)
+    // for (ID_input tmp_flow : all_id_flow)
     {
         for (size_t i = 1; i <= r; i++)
         {
@@ -475,7 +479,7 @@ void find_possible_flows(int i, int j, int k, char *T) // 找到正则表达式�
         {
             int flag = 0;
             /*
-            for (auto iter : all_id_flow)
+            for (auto iter : smaller_id_flow)
             {
                 if (my_cmp(iter.x, ans))
                 {
@@ -620,7 +624,7 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
 
             /*
             int flag = 0;
-            for (auto iter : all_id_flow)
+            for (auto iter : smaller_id_flow)
             {
                 if (my_cmp(iter.x, item->flow))
                 {
@@ -793,49 +797,79 @@ int main()
     hash_function[1] = test_hash_0;
     hash_function[2] = test_hash_1;
     hash_function[3] = test_hash_2;
+    // F为所有大流集合，FF为每次循环找出的大流集合
+    vector<ans_t> F;
+
     if (0 == Read_Flowdata()) //流数据读入
     {
+        // 加入heavy_flow
+        {
+            char tmp_bit_flow[l + 2];
+            double tmp_prob_vector[l + 2];
+            uint32_t tmp_sk_n;
+            for (size_t k = 1; k <= l; k++)
+            {
+                tmp_prob_vector[k] = 1;
+            }
+            for (size_t i = 1; i <= r; i++)
+            {
+                for (size_t j = 1; j <= c; j++)
+                {
+                    if (5000 > heavy_flow[i][j].agree)
+                    {
+                        for (size_t i = 0; i < heavy_flow[i][j].agree; i++)
+                        {
+                            smaller_id_flow.push_back(heavy_flow[i][j].f);
+                        }
+                        continue;
+                    }
+                    for (size_t k = 1; k <= l; k++)
+                    {
+                        tmp_bit_flow[k] = get_bit((unsigned char *)heavy_flow[i][j].f, k - 1);
+                    }
+                    if (heavy_flow[i][j].ex)
+                    {
+                        tmp_sk_n = 0x7fffffff;
+                        int h[r + 1];
+                        for (size_t t_t = 1; t_t <= r; t_t++)
+                        {
+                            h[t_t] = hash_function[t_t](heavy_flow[i][j].f);
+                            tmp_sk_n = min(tmp_sk_n, V[0][t_t][h[t_t]]);
+                        }
+                        for (size_t t_k = 1; t_k <= l; t_k++)
+                        {
+                            if (get_bit(heavy_flow[i][j].f, t_k - 1))
+                            {
+                                for (size_t t_t = 1; t_t <= r; t_t++)
+                                {
+                                    tmp_sk_n = min(tmp_sk_n, V[t_k][t_t][h[t_t]]);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        tmp_sk_n = 0;
+                    }
+                    F.push_back(ans_t(tmp_bit_flow, heavy_flow[i][j].f, heavy_flow[i][j].agree + tmp_sk_n, tmp_prob_vector));
+                }
+            }
+        }
         // 流转sketch
         Flow2Sketch();
         // sketch 生成N(p,sigma)
         Sketch2N_p_sigma();
 
-#ifdef DEBUG
         printf("Read in flow data success\n");
         memcpy(V_initial, V, sizeof(V));
         memcpy(p_initial, p, sizeof(p));
         memcpy(sigma_initial, sigma, sizeof(sigma));
-#endif // DEBUG
     }
     else
     {
         printf("Read in flow data error\n");
     }
 
-    // F为所有大流集合，FF为每次循环找出的大流集合
-    vector<ans_t> F;
-
-    // 加入heavy_flow
-    {
-        char tmp_bit_flow[l + 2];
-        double tmp_prob_vector[l + 2];
-        for (size_t k = 0; k <= l; k++)
-        {
-            tmp_prob_vector[k] = 1;
-        }
-        for (size_t i = 0; i < r; i++)
-        {
-            for (size_t j = 0; j < c; j++)
-            {
-                for (size_t k = 1; k <= l; k++)
-                {
-                    tmp_bit_flow[k] = get_bit((unsigned char*)heavy_flow[i][j].f,k-1);
-                }
-                
-                F.push_back(ans_t(tmp_bit_flow,heavy_flow[i][j].f,heavy_flow[i][j].agree,tmp_prob_vector));
-            }
-        }
-    }
     double theta = 0.5;
     int nnnn = 1;
     while (1)
