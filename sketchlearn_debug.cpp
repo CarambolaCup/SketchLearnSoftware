@@ -37,23 +37,23 @@ const int TimeStamp_length = 0;
 
 //---------------------   在此调参   --------------------------//
 
-const int DATA_FILE_NUM = 10;// 要读的文件个数
-double POSSIBLE_THRESHOLD = 0.99;// hat_p的阈值，论文里提供的是0.99
-const int STAR_THRESHOLD = 11;// 如果一个正则表达式中超过了这么多个*，我们认为没有大流
-int THRESHOLD = 4000;// 展示超过这么大的记录到的流
+const int DATA_FILE_NUM = 10;     // 要读的文件个数
+double POSSIBLE_THRESHOLD = 0.99; // hat_p的阈值，论文里提供的是0.99
+const int STAR_THRESHOLD = 11;    // 如果一个正则表达式中超过了这么多个*，我们认为没有大流
+int THRESHOLD = 4000;             // 展示超过这么大的记录到的流
 
 const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
-const double MY_ERROR_THRESHOLD_V0 = 0.95; // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
+const double MY_ERROR_THRESHOLD_V0 = 0.95;    // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
 
 // 将l,r,c参数及hash函数提前,以方便使用
-const int l = 8 * ID_length;// 流的bit数
-const int r = 3;   // sketch的行数
-const int c = 5000; // sketch的列数
+const int l = 8 * ID_length; // 流的bit数
+const int r = 3;             // sketch的行数
+const int c = 5000;          // sketch的列数
 
 //---------------------   在此调参   --------------------------//
 
-bool my_cmp(char*, char*);
-void Flow_out(char* s);
+bool my_cmp(char *, char *);
+void Flow_out(char *s);
 
 int num_of_star;
 
@@ -61,15 +61,15 @@ class ID_input
 {
 public:
     char x[ID_length + TimeStamp_length + 1];
-    operator char* () const
+    operator char *() const
     {
-        return (char*)x;
+        return (char *)x;
     }
-    operator unsigned char* () const
+    operator unsigned char *() const
     {
-        return (unsigned char*)x;
+        return (unsigned char *)x;
     }
-    bool operator<(const ID_input& _f) const
+    bool operator<(const ID_input &_f) const
     {
         for (int i = 0; i < ID_length; i++)
         {
@@ -87,10 +87,10 @@ public:
 };
 
 // h1,h2...,hr 下标从1开始
-uint32_t(*hash_function[r + 1])(char*);
+uint32_t (*hash_function[r + 1])(char *);
 
-uint64_t AwareHash(unsigned char* data, uint64_t n,
-    uint64_t hash, uint64_t scale, uint64_t hardener)
+uint64_t AwareHash(unsigned char *data, uint64_t n,
+                   uint64_t hash, uint64_t scale, uint64_t hardener)
 {
 
     while (n)
@@ -104,18 +104,33 @@ uint64_t AwareHash(unsigned char* data, uint64_t n,
 
 // 测试哈希函数，六个质数为随机选取
 // 哈希返回为1 ~ c
-uint32_t test_hash_0(char* f)
+uint32_t test_hash_0(char *f)
 {
-    return AwareHash((unsigned char*)f, ID_length, 354289553, 354289627, 1054289603) % c + 1;
+    return AwareHash((unsigned char *)f, ID_length, 354289553, 354289627, 1054289603) % c + 1;
 }
-uint32_t test_hash_1(char* f)
+uint32_t test_hash_1(char *f)
 {
-    return AwareHash((unsigned char*)f, ID_length, 554289569, 554289613, 2054289649) % c + 1;
+    return AwareHash((unsigned char *)f, ID_length, 554289569, 554289613, 2054289649) % c + 1;
 }
-uint32_t test_hash_2(char* f)
+uint32_t test_hash_2(char *f)
 {
-    return AwareHash((unsigned char*)f, ID_length, 654289577, 654289631, 2354289697) % c + 1;
+    return AwareHash((unsigned char *)f, ID_length, 654289577, 654289631, 2354289697) % c + 1;
 }
+
+const int heavy_hitter_num = 50;
+uint32_t heavy_hash(char *f)
+{
+    return AwareHash((unsigned char *)f, ID_length, 125646149, 125646203, 1525646207) % heavy_hitter_num;
+}
+struct flow_tin
+{
+    ID_input f;
+    uint32_t agree;
+    uint32_t disagree;
+    bool ex;
+} heavy_flow[heavy_hitter_num];
+
+bool heavy_flag[heavy_hitter_num];
 
 vector<ID_input> all_id_flow;
 // 按V[k][i][j]排列 k = 0 为总的层 i j 都从1开始
@@ -128,17 +143,56 @@ double p_initial[l + 1];
 double sigma[l + 1];
 double sigma_initial[l + 1];
 
+void Insert_Flow(ID_input f)
+{
+    int h = heavy_hash(f);
+    if (0 == heavy_flag[h])
+    {
+        heavy_flow[h].f = f;
+        heavy_flow[h].agree = 1;
+        heavy_flow[h].ex = false;
+        heavy_flow[h].disagree = 0;
+        heavy_flag[h] = 1;
+    }
+    else
+    {
+        if (my_cmp(f.x, heavy_flow[h].f.x))
+        {
+            heavy_flow[h].agree += 1;
+        }
+        else
+        {
+            heavy_flow[h].disagree += 1;
+            if (heavy_flow[h].disagree <= heavy_flow[h].agree)
+            {
+                all_id_flow.push_back(f);
+            }
+            else
+            {
+                for (size_t i = 0; i < heavy_flow[h].agree; i++)
+                {
+                    all_id_flow.push_back(heavy_flow[h].f);
+                }
+                heavy_flow[h].f = f;
+                heavy_flow[h].agree = 1;
+                heavy_flow[h].ex = true;
+                heavy_flow[h].disagree = 1;
+            }
+        }
+    }
+}
+
 //.dat 转 vector<ID>
 int Read_Flowdata()
 {
     char datafileName[100];
     // 注意文件路径
 #ifndef SMALL_DATA
-    sprintf(datafileName, "./formatted00.dat"); 
+    sprintf(datafileName, "./formatted00.dat");
 
     ID_input tmp_five_tuple;
 
-    FILE* fin = fopen(datafileName, "rb");
+    FILE *fin = fopen(datafileName, "rb");
     if (NULL != fin)
     {
         int k_count = 0;
@@ -146,7 +200,7 @@ int Read_Flowdata()
         {
             // 跳过时间戳
             fread(&tmp_five_tuple, ID_length, 1, fin);
-            all_id_flow.push_back(tmp_five_tuple);
+            Insert_Flow(tmp_five_tuple);
             k_count++;
         }
 
@@ -164,13 +218,13 @@ int Read_Flowdata()
         return -1;
     }
 #else
-    for(int kk = 0; kk <= DATA_FILE_NUM; kk++)
+    for (int kk = 0; kk <= DATA_FILE_NUM; kk++)
     {
-        sprintf(datafileName, "./data/%d.dat",kk);
+        sprintf(datafileName, "./data/%d.dat", kk);
 
         ID_input tmp_five_tuple;
 
-        FILE* fin = fopen(datafileName, "rb");
+        FILE *fin = fopen(datafileName, "rb");
         if (NULL != fin)
         {
             int k_count = 0;
@@ -182,12 +236,11 @@ int Read_Flowdata()
 
             fclose(fin);
 
-    #ifdef DEBUG
+#ifdef DEBUG
             // 约 2000 0000
             int test_a = all_id_flow.size();
-            printf("READ %d FLOWS, %d TIMES\n",test_a, kk);
-    #endif // DEBUG
-
+            printf("READ %d FLOWS, %d TIMES\n", test_a, kk);
+#endif // DEBUG
         }
         else
         {
@@ -200,7 +253,7 @@ int Read_Flowdata()
 }
 
 //使用了大端法
-int get_bit(unsigned char* a, int pos)
+int get_bit(unsigned char *a, int pos)
 {
     int byte = pos / 8;
     int bit = pos % 8;
@@ -213,7 +266,7 @@ int get_bit(unsigned char* a, int pos)
         return 1;
     }
 }
-void set_bit(unsigned char* a, int pos, int v)
+void set_bit(unsigned char *a, int pos, int v)
 {
     int byte = pos / 8;
     int bit = pos % 8;
@@ -240,7 +293,7 @@ void Flow2Sketch()
         for (size_t k = 1; k <= ID_length * 8; k++)
         {
             // 0 则对 V[k] 无影响
-            if (0 != get_bit((unsigned char*)tmp_flow, k - 1))
+            if (0 != get_bit((unsigned char *)tmp_flow, k - 1))
             {
                 for (size_t i = 1; i <= r; i++)
                 {
@@ -293,7 +346,7 @@ struct ans_t // 是extract large flow返回向量中元素的type
     char flow[(l + 7) / 8 + 1]; // 这个是跟源数据相同的结构
     unsigned int size;          // 流的大小
     double prob_vector[l + 2];  // 可能性向量
-    ans_t(char* bbit_flow, char* fflow, unsigned int ssize = 0, double* pprob_vector = NULL)
+    ans_t(char *bbit_flow, char *fflow, unsigned int ssize = 0, double *pprob_vector = NULL)
     {
         strcpy(bit_flow, bbit_flow);
         for (int i = 0; i < ID_length; i++)
@@ -312,7 +365,7 @@ struct ans_t // 是extract large flow返回向量中元素的type
 };
 
 double cal_hat_p(double theta, int i, int j,
-    unsigned int V[][r + 1][c + 1], double* p, double* sigama, int k) // 计算大流第k个bit为1的概率
+                 unsigned int V[][r + 1][c + 1], double *p, double *sigama, int k) // 计算大流第k个bit为1的概率
 {
     double r = (double)V[k][i][j] / V[0][i][j];
     if (r < theta)
@@ -325,9 +378,9 @@ double cal_hat_p(double theta, int i, int j,
     }
     double ans = 0;
     double prob_1 = (V[k][i][j] - theta * V[0][i][j]) /
-        (V[0][i][j] - theta * V[0][i][j]);
+                    (V[0][i][j] - theta * V[0][i][j]);
     double prob_0 = (V[k][i][j]) /
-        (V[0][i][j] - theta * V[0][i][j]);
+                    (V[0][i][j] - theta * V[0][i][j]);
     double normal_val1 = normalCFD((prob_1 - p[k]) / sigama[k]);
     double normal_val0 = normalCFD((prob_0 - p[k]) / sigama[k]);
     /*
@@ -341,9 +394,8 @@ double cal_hat_p(double theta, int i, int j,
     return normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]);
 }
 
-
 double cal_hat_p_print(double theta, int i, int j,
-    unsigned int V[][r + 1][c + 1], double* p, double* sigama, int k) // 计算大流第k个bit为1的概率
+                       unsigned int V[][r + 1][c + 1], double *p, double *sigama, int k) // 计算大流第k个bit为1的概率
 {
     double r = (double)V[k][i][j] / V[0][i][j];
     if (r < theta)
@@ -356,9 +408,9 @@ double cal_hat_p_print(double theta, int i, int j,
     }
     double ans = 0;
     double prob_1 = (V[k][i][j] - theta * V[0][i][j]) /
-        (V[0][i][j] - theta * V[0][i][j]);
+                    (V[0][i][j] - theta * V[0][i][j]);
     double prob_0 = (V[k][i][j]) /
-        (V[0][i][j] - theta * V[0][i][j]);
+                    (V[0][i][j] - theta * V[0][i][j]);
     double normal_val1 = normalCFD((prob_1 - p[k]) / sigama[k]);
     double normal_val0 = normalCFD((prob_0 - p[k]) / sigama[k]);
     if (normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) < 0.99 && normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) > 0.01 ||
@@ -372,12 +424,11 @@ double cal_hat_p_print(double theta, int i, int j,
     return normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]);
 }
 
-
 struct two_types_of_flow // 两种流表示
 {
     char bit_flow[l + 2];       // 一个'1'或者'0'表示一个bit
     char flow[(l + 7) / 8 + 1]; // 应该是和给定的数据一样的结构(不知道会不会有bug...)
-    two_types_of_flow(char* bbit_flow, char* fflow)
+    two_types_of_flow(char *bbit_flow, char *fflow)
     {
         strcpy(bit_flow, bbit_flow);
         for (int i = 0; i < (l + 7) / 8; i++)
@@ -395,7 +446,7 @@ int flag_ = 0;
 
 int loop_num = 0;
 
-void find_possible_flows(int i, int j, int k, char* T) // 找到正则表达式中所有可能的流
+void find_possible_flows(int i, int j, int k, char *T) // 找到正则表达式中所有可能的流
 {
     if (k == l + 1)
     {
@@ -407,7 +458,7 @@ void find_possible_flows(int i, int j, int k, char* T) // 找到正则表达式�
 
         for (int kk = 1; kk <= l; kk++)
         {
-            set_bit((unsigned char*)ans, kk - 1, current_T[kk] == '1' ? 1 : 0);
+            set_bit((unsigned char *)ans, kk - 1, current_T[kk] == '1' ? 1 : 0);
         }
 
         ans[(l + 7) / 8] = '\0';
@@ -436,7 +487,7 @@ void find_possible_flows(int i, int j, int k, char* T) // 找到正则表达式�
             }
             */
             possible_flows.push_back(two_types_of_flow(current_T, ans));
-            //Flow_out(possible_flows.back().flow);
+            // Flow_out(possible_flows.back().flow);
         }
         return;
     }
@@ -467,7 +518,7 @@ void find_possible_flows(int i, int j, int k, char* T) // 找到正则表达式�
  *
  */
 vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
-    unsigned int V[][r + 1][c + 1], double* p, double* sigama)
+                                unsigned int V[][r + 1][c + 1], double *p, double *sigama)
 {
     // 第一步，计算每个bit的概率估值
     double hat_p[l + 1];
@@ -522,21 +573,21 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     double estimated_frequency[l + 1];
     double estimated_p[l + 1];
     for (vector<two_types_of_flow>::iterator item = possible_flows.begin();
-        item != possible_flows.end(); item++)
+         item != possible_flows.end(); item++)
     {
         int min_sketch = 0xfffffff;
         for (int k = 1; k <= l; k++)
         {
             if (item->bit_flow[k] == '1')
             {
-                min_sketch = (V[k][i][j] < min_sketch)? V[k][i][j] : min_sketch;
+                min_sketch = (V[k][i][j] < min_sketch) ? V[k][i][j] : min_sketch;
                 double r = (double)V[k][i][j] / V[0][i][j];
                 estimated_frequency[k] = ((r - p[k]) / (1 - p[k])) * V[0][i][j];
                 estimated_p[k] = hat_p[k];
             }
             else
             {
-                min_sketch = (V[0][i][j] - V[k][i][j] < min_sketch)? V[0][i][j] - V[k][i][j] : min_sketch;
+                min_sketch = (V[0][i][j] - V[k][i][j] < min_sketch) ? V[0][i][j] - V[k][i][j] : min_sketch;
                 double r = (double)V[k][i][j] / V[0][i][j];
                 estimated_frequency[k] = (1 - r / p[k]) * V[0][i][j];
 
@@ -545,10 +596,10 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
         }
         sort(estimated_frequency + 1, estimated_frequency + 1 + l);
         double ans_estimated_frequency = estimated_frequency[l / 2];
-        if(ans_estimated_frequency > min_sketch)
+        if (ans_estimated_frequency > min_sketch)
         {
-            if(ans_estimated_frequency > MY_ERROR_THRESHOLD_SKETCH * min_sketch && 
-               ans_estimated_frequency > MY_ERROR_THRESHOLD_V0 * V[0][i][j])
+            if (ans_estimated_frequency > MY_ERROR_THRESHOLD_SKETCH * min_sketch &&
+                ans_estimated_frequency > MY_ERROR_THRESHOLD_V0 * V[0][i][j])
             {
                 break;
             }
@@ -575,9 +626,9 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
             }
             */
         }
-        //Flow_out(item->flow);
+        // Flow_out(item->flow);
         result.push_back(ans_t(item->bit_flow, item->flow, ans_estimated_frequency, estimated_p));
-        //Flow_out(result.back().flow);
+        // Flow_out(result.back().flow);
     }
     // printf("V[%d][%d] step 3 completed\n", i, j);
     //  第四步，去sketch里查候选流的数据，删掉过小的
@@ -585,7 +636,7 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     {
         return result;
     }
-    for (vector<ans_t>::iterator item = result.begin(); item != result.end(); )
+    for (vector<ans_t>::iterator item = result.begin(); item != result.end();)
     {
         for (int ii = 1; ii <= r; ii++)
         {
@@ -609,9 +660,11 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
         if (item->size < theta * V[0][i][j])
         {
             item = result.erase(item);
-            if (item == result.end())break;
+            if (item == result.end())
+                break;
         }
-        else {
+        else
+        {
             item++;
         }
     }
@@ -625,7 +678,7 @@ void RemoveFlows(vector<ans_t> FF)
     uint32_t tmp_hash[r + 1];
     for (int it = 0; it < FF.size(); it++)
     {
-        char* ans = FF[it].flow;
+        char *ans = FF[it].flow;
 
         for (size_t i = 1; i <= r; i++)
         {
@@ -634,7 +687,7 @@ void RemoveFlows(vector<ans_t> FF)
         }
         for (size_t k = 1; k <= ID_length * 8; k++)
         {
-            if (0 != get_bit((unsigned char*)ans, k - 1))
+            if (0 != get_bit((unsigned char *)ans, k - 1))
             {
                 for (size_t i = 1; i <= r; i++)
                 {
@@ -670,17 +723,17 @@ bool Terminate(double theta)
                     sigma_num1++;
             }
         }
-        if(sigma_num1 == 0 && sigma_num2 == 0 && sigma_num3 == 0)
+        if (sigma_num1 == 0 && sigma_num2 == 0 && sigma_num3 == 0)
         {
             printf("I WONDER WHY PROGRAME RUNNING REACH HERE\n");
         }
         double rate1 = (double)sigma_num1 / (double)(r * c);
         double rate2 = (double)sigma_num2 / (double)(r * c);
         double rate3 = (double)sigma_num3 / (double)(r * c);
-        #ifdef PRINT_TERMINATE_DATA
+#ifdef PRINT_TERMINATE_DATA
         printf("V[%d] sigma1_num=%d,sigma2_num=%d,sigma3_num=%d\n", (int)k, (int)sigma_num1, (int)sigma_num2, (int)sigma_num3);
         printf("V[%d] rate1=%lf,rate2=%lf,rate3=%lf\n", (int)k, rate1, rate2, rate3);
-        #endif// PRINT_TERMINATE_DATA
+#endif // PRINT_TERMINATE_DATA
         if (rate1 < RATE1)
             return false;
         if (rate2 < RATE2)
@@ -691,7 +744,7 @@ bool Terminate(double theta)
     return true;
 }
 
-bool my_cmp(char* s1, char* s2)
+bool my_cmp(char *s1, char *s2)
 {
     for (size_t i = 0; i < ID_length; i++)
     {
@@ -703,7 +756,7 @@ bool my_cmp(char* s1, char* s2)
     return true;
 }
 
-void Flow_out(char* s)
+void Flow_out(char *s)
 {
     printf("ID: ");
     for (size_t i = 0; i < ID_length; i++)
@@ -718,7 +771,7 @@ struct two_int
     int i1;
     int i2;
     double ratio;
-    two_int() : i1(0), i2(0) {};
+    two_int() : i1(0), i2(0){};
 };
 
 int main()
@@ -766,7 +819,7 @@ int main()
                     continue;
                 }
                 vector<ans_t> temp_F = ExtractLargeFlows(theta, i, j,
-                    V, p, sigma);
+                                                         V, p, sigma);
                 if (!temp_F.empty())
                 {
                     my_flow_num++;
@@ -787,12 +840,12 @@ int main()
                         if (!temp_Fin)
                             FF.push_back(*it);
                     }
-                    #ifdef PRINT_CAUGHT_FLOW_NUM
-                    if(my_flow_num % 100 == 0)
+#ifdef PRINT_CAUGHT_FLOW_NUM
+                    if (my_flow_num % 100 == 0)
                     {
-                        printf("CAUGHT %d FLOWS!\n",my_flow_num);
+                        printf("CAUGHT %d FLOWS!\n", my_flow_num);
                     }
-                    #endif
+#endif
                 }
             }
         }
@@ -854,7 +907,7 @@ int main()
         public:
             ID_input f;
             uint32_t s;
-            bool operator<(const flow_debug& _flow)
+            bool operator<(const flow_debug &_flow)
             {
                 return (s < _flow.s);
             }
@@ -864,7 +917,7 @@ int main()
         printf("SORT BEGIN!\n");
         sort(Flow_sort.begin(), Flow_sort.end());
         printf("SORT END!\n");
-        printf("NEED %d LOOPS\n",Flow_sort.size());
+        printf("NEED %d LOOPS\n", Flow_sort.size());
         ID_input tmp_flow;
         uint32_t flow_size;
         auto iter = Flow_sort.begin();
@@ -885,47 +938,47 @@ int main()
             else
             {
                 tmp.f = tmp_flow;
-                tmp.s = flow_size; 
+                tmp.s = flow_size;
                 flow_queue[tmp.f].i1 = tmp.s;
                 tmp_flow = *iter;
                 flow_size = 1;
             }
             ++iter;
-            loop_time ++;
-            #ifdef PRINT_LOOP_TIMES
-            if(loop_time % 100000 == 0)
+            loop_time++;
+#ifdef PRINT_LOOP_TIMES
+            if (loop_time % 100000 == 0)
             {
-                printf("LOOP %d TIMES!\n",loop_time);
-                printf("FLOW QUEUE LENGTH: %d\n",flow_queue.size());
+                printf("LOOP %d TIMES!\n", loop_time);
+                printf("FLOW QUEUE LENGTH: %d\n", flow_queue.size());
             }
-            #endif// PRINT_LOOP_TIMES
+#endif // PRINT_LOOP_TIMES
         }
         flow_queue[tmp.f].i1 = flow_size;
-        for(auto item : F)
+        for (auto item : F)
         {
             ID_input x;
-            for(int i=0;i<=ID_length;i++)
+            for (int i = 0; i <= ID_length; i++)
             {
-                x.x[i]=item.flow[i];
+                x.x[i] = item.flow[i];
             }
             flow_queue[x].i2 = item.size;
-            flow_queue[x].ratio = (double)flow_queue[x].i1/flow_queue[x].i2;
+            flow_queue[x].ratio = (double)flow_queue[x].i1 / flow_queue[x].i2;
         }
         double error_rate = 0;
         for (auto i : flow_queue)
         {
-            if(i.second.i1 > THRESHOLD || i.second.i2 > THRESHOLD)
+            if (i.second.i1 > THRESHOLD || i.second.i2 > THRESHOLD)
             {
-                //Flow_out(i.first);
-                #ifdef PRINT_RESULT
-                    printf("appear  %d  times, SKETCH CATCH %d TIMES, RATIO: %lf\n", i.second.i1, i.second.i2, i.second.ratio);
-                #endif// PRINT_RESULT
+// Flow_out(i.first);
+#ifdef PRINT_RESULT
+                printf("appear  %d  times, SKETCH CATCH %d TIMES, RATIO: %lf\n", i.second.i1, i.second.i2, i.second.ratio);
+#endif // PRINT_RESULT
                 error_rate += i.second.i1 * (i.second.ratio - 1.0) * (i.second.ratio - 1.0);
             }
         }
-        
+
         printf("\nDEBUG END!!! \nTHRESHOLD: %d\nERROR RATIO: %lf\nPOSSIBLE_THRESHOLD: %lf\nSTAR_THRESHOLD: %d\nMY_ERROR_THRESHOLD_SKETCH: %lf\nMY_ERROR_THRESHOLD_V0: %lf\nSKETCH LENGTH: %d, HEIGHT: %d, WIDTH: %d\n",
-               THRESHOLD,error_rate,POSSIBLE_THRESHOLD,STAR_THRESHOLD,MY_ERROR_THRESHOLD_SKETCH,MY_ERROR_THRESHOLD_V0, l, r, c);
+               THRESHOLD, error_rate, POSSIBLE_THRESHOLD, STAR_THRESHOLD, MY_ERROR_THRESHOLD_SKETCH, MY_ERROR_THRESHOLD_V0, l, r, c);
         return 0;
     }
 #endif // DEBUG
