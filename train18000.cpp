@@ -187,10 +187,6 @@ void Insert_Flow(ID_input f)
             }
             else
             {
-                if (heavy_flow[h].agree > 10000)
-                {
-                    printf("flow > 10000 but it is expel\n");
-                }
                 for (size_t i = 0; i < heavy_flow[h].agree; i++)
                 {
                     smaller_id_flow.push_back(heavy_flow[h].f);
@@ -261,7 +257,6 @@ int Read_Flowdata()
 #ifdef DEBUG
             // 约 2000 0000
             int test_a = smaller_id_flow.size();
-            printf("READ %d FLOWS, %d TIMES\n", test_a, kk);
 #endif // DEBUG
         }
         else
@@ -356,11 +351,6 @@ void Sketch2N_p_sigma()
 
 double normalCFD(double value) // 计算标准正态分布
 {
-    /*
-    printf("------------------------------VAL1: %lf\n", value);
-    printf("------------------------------VAL2: %lf\n", -value / sqrt(2));
-    printf("------------------------------RSLT: %lf\n", erfc(-value / sqrt(2)));
-    */
     return 0.5 * erfc(-value / sqrt(2));
 }
 
@@ -407,14 +397,6 @@ double cal_hat_p(double theta, int i, int j,
                     (V[0][i][j] - theta * V[0][i][j]);
     double normal_val1 = normalCFD((prob_1 - p[k]) / sigama[k]);
     double normal_val0 = normalCFD((prob_0 - p[k]) / sigama[k]);
-    /*
-    if (normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) < 0.99 && normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) > 0.01 ||
-        normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) < 0 || normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) > 1)
-    {
-        printf("Sigama: %lf, Pk : %lf, i: %d, j: %d, theta: %lf, Vk: %d, V0: %d\n", sigama[k], p[k], i, j, theta, V[k][i][j], V[0][i][j]);
-        printf("PROB1 : %lf, PROB2 : %lf, N0 : %lf, N1: %lf, HAT_P : %lf\n", prob_0, prob_1, normal_val0, normal_val1, normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]));
-    }
-    */
     return normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]);
 }
 
@@ -437,14 +419,6 @@ double cal_hat_p_print(double theta, int i, int j,
                     (V[0][i][j] - theta * V[0][i][j]);
     double normal_val1 = normalCFD((prob_1 - p[k]) / sigama[k]);
     double normal_val0 = normalCFD((prob_0 - p[k]) / sigama[k]);
-    if (normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) < 0.99 && normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) > 0.01 ||
-        normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) < 0 || normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]) > 1)
-    {
-        printf("ERFC1: %lf, ERFC0: %lf\n", erfc(-((prob_1 - p[k]) / sigama[k]) / sqrt(2)), erfc(-((prob_0 - p[k]) / sigama[k]) / sqrt(2)));
-        printf("NORMAL ARG1: %lf, ARG0: %lf\n", (prob_1 - p[k]) / sigama[k], (prob_0 - p[k]) / sigama[k]);
-        printf("Sigama: %lf, Pk : %lf, i: %d, j: %d, theta: %lf, Vk: %d, V0: %d\n", sigama[k], p[k], i, j, theta, V[k][i][j], V[0][i][j]);
-        printf("PROB1 : %lf, PROB2 : %lf, N0 : %lf, N1: %lf, HAT_P : %lf\n", prob_0, prob_1, normal_val0, normal_val1, normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]));
-    }
     return normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]);
 }
 
@@ -474,10 +448,6 @@ void find_possible_flows(int i, int j, int k, char *T) // 找到正则表达式�
 {
     if (k == l + 1)
     {
-        if ((++loop_num) % 15000 == 0 && loop_num > 15000)
-        {
-            printf("%d stars: LOOP %d TIMES!\n", num_of_star, loop_num);
-        }
         char ans[(l + 7) / 8 + 1];
 
         for (int kk = 1; kk <= l; kk++)
@@ -489,29 +459,7 @@ void find_possible_flows(int i, int j, int k, char *T) // 找到正则表达式�
         if (hash_function[i](ans) == j)
         {
             int flag = 0;
-            /*
-            for (auto iter : smaller_id_flow)
-            {
-                if (my_cmp(iter.x, ans))
-                {
-                    flag = 1;
-                    break;
-                }
-            }
-            if (flag == 0)
-            {
-                printf("----------------NOT IN!-------------\n");
-                printf("T: %s\n", T);
-            }
-            else if (flag == 1)
-            {
-                printf("----------------IN!-------------\n");
-                Flow_out(ans);
-                printf("\n");
-            }
-            */
             possible_flows.push_back(two_types_of_flow(current_T, ans));
-            // Flow_out(possible_flows.back().flow);
         }
         return;
     }
@@ -550,7 +498,6 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     {
         hat_p[k] = cal_hat_p(theta, i, j, V, p, sigama, k);
     }
-    // printf("V[%d][%d] step 1 completed\n", i, j);
     //  第二步，找到所有候选的大流，存在possible_flows里面
     char T[l + 2];
     for (int k = 1; k <= l; k++)
@@ -592,7 +539,6 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     current_T[0] = '#';
     possible_flows.clear();
     find_possible_flows(i, j, 1, T);
-    // printf("V[%d][%d] step 2 completed\n", i, j);
     //  第三步，估计大流的频率和可能性向量
     double estimated_frequency[l + 1];
     double estimated_p[l + 1];
@@ -628,33 +574,9 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
                 break;
             }
             ans_estimated_frequency = min_sketch;
-            /*
-            printf("ESTIMATED LARGER THAN MIN SKETCH! ESTIMATED: %lf, MIN: %d, V0: %d\n", ans_estimated_frequency, min_sketch, V[0][i][j]);
-            ans_estimated_frequency = min_sketch;
-            */
-
-            /*
-            int flag = 0;
-            for (auto iter : smaller_id_flow)
-            {
-                if (my_cmp(iter.x, item->flow))
-                {
-                    flag = 1;
-                    break;
-                }
-            }
-            if (flag == 0)
-            {
-                printf("----------------NOT IN!-------------\n");
-                printf("T: %s\n", T);
-            }
-            */
         }
-        // Flow_out(item->flow);
         result.push_back(ans_t(item->bit_flow, item->flow, ans_estimated_frequency, estimated_p));
-        // Flow_out(result.back().flow);
     }
-    // printf("V[%d][%d] step 3 completed\n", i, j);
     //  第四步，去sketch里查候选流的数据，删掉过小的
     if (r == 1)
     {
@@ -747,17 +669,9 @@ bool Terminate(double theta)
                     sigma_num1++;
             }
         }
-        if (sigma_num1 == 0 && sigma_num2 == 0 && sigma_num3 == 0)
-        {
-            printf("I WONDER WHY PROGRAME RUNNING REACH HERE\n");
-        }
         double rate1 = (double)sigma_num1 / (double)(r * c);
         double rate2 = (double)sigma_num2 / (double)(r * c);
         double rate3 = (double)sigma_num3 / (double)(r * c);
-#ifdef PRINT_TERMINATE_DATA
-        printf("V[%d] sigma1_num=%d,sigma2_num=%d,sigma3_num=%d\n", (int)k, (int)sigma_num1, (int)sigma_num2, (int)sigma_num3);
-        printf("V[%d] rate1=%lf,rate2=%lf,rate3=%lf\n", (int)k, rate1, rate2, rate3);
-#endif // PRINT_TERMINATE_DATA
         if (rate1 < RATE1)
             return false;
         if (rate2 < RATE2)
@@ -782,12 +696,10 @@ bool my_cmp(char *s1, char *s2)
 
 void Flow_out(char *s)
 {
-    printf("ID: ");
     for (size_t i = 0; i < ID_length; i++)
     {
         printf("%d ", s[i]);
     }
-    printf("\n");
 }
 
 struct two_int
@@ -811,10 +723,11 @@ int main()
     // F为所有大流集合，FF为每次循环找出的大流集合
     vector<ans_t> F;
 
-    int lowest_agree = (int)(((double)k_count / (double)heavy_hash_length) * lowest_agree_ratio); // 第一批最低计入大流的agree number
+    int lowest_agree; // 第一批最低计入大流的agree number
 
     if (0 == Read_Flowdata()) //流数据读入
     {
+        lowest_agree = (int)(((double)k_count / (double)heavy_hash_length) * lowest_agree_ratio);
         {
             char tmp_bit_flow[l + 2];
             double tmp_prob_vector[l + 2];
@@ -826,18 +739,14 @@ int main()
 
             for (size_t j = 1; j <= heavy_hash_length; j++)
             {
-                if (my_debug_cmp(heavy_flow[j].f.x))
-                {
-                    printf("HEAVY PART CAUGHT THE BUGGY FLOW, SIZE: %d\n", heavy_flow[j].agree);
-                }
-                if (lowest_agree > heavy_flow[j].agree)
-                {
-                    for (size_t i = 0; i < heavy_flow[j].agree; i++)
-                    {
-                        smaller_id_flow.push_back(heavy_flow[j].f);
-                    }
-                    continue;
-                }
+                // if (lowest_agree > heavy_flow[j].agree)
+                // {
+                //     for (size_t i = 0; i < heavy_flow[j].agree; i++)
+                //     {
+                //         smaller_id_flow.push_back(heavy_flow[j].f);
+                //     }
+                //     continue;
+                // }
                 for (size_t tmp_l = 1; tmp_l <= l; tmp_l++)
                 {
                     tmp_bit_flow[tmp_l] = (get_bit(heavy_flow[j].f, tmp_l - 1) == 1) ? '1' : '0';
@@ -850,28 +759,18 @@ int main()
         // 加入heavy_flow
         Sketch2N_p_sigma();
 
-        printf("Read in flow data success\n");
         memcpy(V_initial, V, sizeof(V));
         memcpy(p_initial, p, sizeof(p));
         memcpy(sigma_initial, sigma, sizeof(sigma));
     }
     else
     {
-        printf("Read in flow data error\n");
     }
 
     double theta = 0.5;
     int nnnn = 1;
     while (1)
     {
-        printf("LOOP %d START!\n", nnnn);
-        for (auto iter : F)
-        {
-            if (my_debug_cmp(iter.flow))
-            {
-                printf("BUGGY FLOW IS IN! SIZE: %d\n", iter.size);
-            }
-        }
         int my_flow_num = 0;
         vector<ans_t> FF;
         for (int i = 1; i <= r; i++)
@@ -904,19 +803,12 @@ int main()
                         if (!temp_Fin)
                             FF.push_back(*it);
                     }
-#ifdef PRINT_CAUGHT_FLOW_NUM
-                    if (my_flow_num % 100 == 0)
-                    {
-                        printf("CAUGHT %d FLOWS!\n", my_flow_num);
-                    }
-#endif
                 }
             }
         }
         //本次循环找出大流时，剔除大流，重新计算期望、方差
         if (!FF.empty())
         {
-            printf("SIZE : %d\n", FF.size());
             for (vector<ans_t>::iterator it = FF.begin(); it < FF.end(); it++)
             {
                 bool FF_in = false;
@@ -939,17 +831,11 @@ int main()
                 else if (FF_in)
                 {
                     temp_pos->size += it->size;
-                    if (my_debug_cmp(temp_pos->bit_flow))
-                    {
-                        printf("ADD BUGGY FLOW FINISH, SIZE: %d\n", temp_pos->size);
-                    }
                 }
             }
             RemoveFlows(FF);
-            printf("RemoveFlowscompleted\n");
             Sketch2N_p_sigma();
         }
-        printf("%d loop is completed______________, theta = %lf\n\n", nnnn, theta);
         nnnn++;
         /*
         if (nnnn > 10)
@@ -963,11 +849,6 @@ int main()
             theta /= 2;
     }
 
-#ifdef DEBUG
-
-    printf("\n--------------------------------------------------------\n");
-#endif // DEBUG
-    printf("\n########################################################\n");
 
 #ifdef DEBUG
     {
@@ -983,10 +864,7 @@ int main()
         };
         map<ID_input, two_int> flow_queue;
         vector<ID_input> Flow_sort = all_id_flow;
-        printf("SORT BEGIN!\n");
         sort(Flow_sort.begin(), Flow_sort.end());
-        printf("SORT END!\n");
-        printf("NEED %d LOOPS\n", Flow_sort.size());
         ID_input tmp_flow;
         uint32_t flow_size;
         auto iter = Flow_sort.begin();
@@ -1014,13 +892,6 @@ int main()
             }
             ++iter;
             loop_time++;
-#ifdef PRINT_LOOP_TIMES
-            if (loop_time % 100000 == 0)
-            {
-                printf("LOOP %d TIMES!\n", loop_time);
-                printf("FLOW QUEUE LENGTH: %d\n", flow_queue.size());
-            }
-#endif // PRINT_LOOP_TIMES
         }
         flow_queue[tmp.f].i1 = flow_size;
         for (auto item : F)
@@ -1031,10 +902,6 @@ int main()
                 x.x[i] = item.flow[i];
             }
             flow_queue[x].i2 = item.size;
-            if (flow_queue[x].i2 == 797 && flow_queue[x].i1 == 15119)
-            {
-                Flow_out(x.x);
-            }
             flow_queue[x].ratio = (double)flow_queue[x].i1 / flow_queue[x].i2;
         }
         double error_rate = 0;
@@ -1042,10 +909,6 @@ int main()
         {
             if (i.second.i1 > THRESHOLD || i.second.i2 > THRESHOLD)
             {
-// Flow_out(i.first);
-#ifdef PRINT_RESULT
-                printf("appear  %d  times, SKETCH CATCH %d TIMES, RATIO: %lf\n", i.second.i1, i.second.i2, i.second.ratio);
-#endif // PRINT_RESULT
                 error_rate += i.second.i1 * (i.second.ratio - 1.0) * (i.second.ratio - 1.0);
             }
         }
