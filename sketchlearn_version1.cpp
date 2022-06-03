@@ -17,7 +17,7 @@ using namespace std;
 #define DEBUG
 //#define OVERALL_DEBUG //比较所有流
 #define LOCAL_DEBUG  //比较捕获了的流
-#define PRINT_RESULT //是否输出完整结果
+// #define PRINT_RESULT //是否输出完整结果
 //#define PRINT_LOOP_TIMES//最后输出loop的次数
 //#define PRINT_TERMINATE_DATA//输出TERMINATE的数据
 //#define PRINT_CAUGHT_FLOW_NUM//每捕获100个流输出一条消息
@@ -44,27 +44,27 @@ int THRESHOLD = 4000;             // 展示超过这么大的记录到的流
 
 const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
 const double MY_ERROR_THRESHOLD_V0 = 0.95;    // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
-const int lowest_agree = 9000;
 
 // 将l,r,c参数及hash函数提前,以方便使用
-const int l = 8 * ID_length; // 流的bit数
-const int r = 3;             // sketch的行数
-const int c = 9000;          // sketch的列数
-const int heavy_hash_length = 18000; // heavy_flow的长度
+const int l = 8 * ID_length;         // 流的bit数
+const int r = 3;                     // sketch的行数
+const int c = 9000;                  // sketch的列数
+const int heavy_hash_length = 27000; // heavy_flow的长度
+const double eta = 50;               // disagree / agree 比例
+const int lowest_agree = 5000;       // 第一批最低计入大流的agree数
 
 //---------------------   在此调参   --------------------------//
 
 bool my_debug_cmp(char *s)
 {
-    return 
-    (s[0] == -126   &&
-     s[1] == 48     &&
-     s[2] == 57     &&
-     s[3] == -121   &&
-     s[4] == 43     &&
-     s[5] == -4     &&
-     s[6] == -32    &&
-     s[7] == -122   );
+    return (s[0] == -126 &&
+            s[1] == 48 &&
+            s[2] == 57 &&
+            s[3] == -121 &&
+            s[4] == 43 &&
+            s[5] == -4 &&
+            s[6] == -32 &&
+            s[7] == -122);
 }
 
 bool my_cmp(char *, char *);
@@ -137,9 +137,6 @@ uint32_t heavy_hash(char *f)
     return AwareHash((unsigned char *)f, ID_length, 354289577, 354289631, 1754289697) % heavy_hash_length + 1;
 }
 
-// double eta = 4.7875; 会导致大于10000 agree 的流被驱逐
-double eta = 10;
-// double eta = 1;
 struct flow_tin
 {
     ID_input f;
@@ -307,7 +304,7 @@ void set_bit(unsigned char *a, int pos, int v)
 
 void Flow2Sketch()
 {
-    memset(V,0,sizeof(V));
+    memset(V, 0, sizeof(V));
     uint32_t tmp_hash[r + 1];
     for (ID_input tmp_flow : smaller_id_flow)
     // for (ID_input tmp_flow : all_id_flow)
@@ -827,7 +824,7 @@ int main()
 
             for (size_t j = 1; j <= heavy_hash_length; j++)
             {
-                if(my_debug_cmp(heavy_flow[j].f.x))
+                if (my_debug_cmp(heavy_flow[j].f.x))
                 {
                     printf("HEAVY PART CAUGHT THE BUGGY FLOW, SIZE: %d\n", heavy_flow[j].agree);
                 }
@@ -838,6 +835,10 @@ int main()
                         smaller_id_flow.push_back(heavy_flow[j].f);
                     }
                     continue;
+                }
+                for (size_t tmp_l = 1; tmp_l <= l; tmp_l++)
+                {
+                    tmp_bit_flow[tmp_l] = (get_bit(heavy_flow[j].f, tmp_l - 1) == 1) ? '1' : '0';
                 }
                 F.push_back(ans_t(tmp_bit_flow, heavy_flow[j].f, heavy_flow[j].agree, tmp_prob_vector));
             }
@@ -861,13 +862,13 @@ int main()
     int nnnn = 1;
     while (1)
     {
-        printf("LOOP %d START!\n",nnnn);
-        for(auto iter : F)
+        printf("LOOP %d START!\n", nnnn);
+        for (auto iter : F)
         {
-                        if(my_debug_cmp(iter.flow))
-                        {
-                            printf("BUGGY FLOW IS IN! SIZE: %d\n",iter.size);
-                        }
+            if (my_debug_cmp(iter.flow))
+            {
+                printf("BUGGY FLOW IS IN! SIZE: %d\n", iter.size);
+            }
         }
         int my_flow_num = 0;
         vector<ans_t> FF;
@@ -922,8 +923,8 @@ int main()
                 {
                     for (vector<ans_t>::iterator iter = F.begin(); iter < F.end(); iter++)
                     {
-                        if(my_cmp(iter->flow,it->flow))
-                        //if (strcmp(iter->bit_flow, it->bit_flow) == 0)
+                        if (my_cmp(iter->flow, it->flow))
+                        // if (strcmp(iter->bit_flow, it->bit_flow) == 0)
                         {
                             FF_in = true;
                             temp_pos = iter;
@@ -936,9 +937,9 @@ int main()
                 else if (FF_in)
                 {
                     temp_pos->size += it->size;
-                    if(my_debug_cmp(temp_pos->bit_flow))
+                    if (my_debug_cmp(temp_pos->bit_flow))
                     {
-                        printf("ADD BUGGY FLOW FINISH, SIZE: %d\n",temp_pos->size);
+                        printf("ADD BUGGY FLOW FINISH, SIZE: %d\n", temp_pos->size);
                     }
                 }
             }
@@ -1028,7 +1029,7 @@ int main()
                 x.x[i] = item.flow[i];
             }
             flow_queue[x].i2 = item.size;
-            if(flow_queue[x].i2 == 797 && flow_queue[x].i1 == 15119)
+            if (flow_queue[x].i2 == 797 && flow_queue[x].i1 == 15119)
             {
                 Flow_out(x.x);
             }
