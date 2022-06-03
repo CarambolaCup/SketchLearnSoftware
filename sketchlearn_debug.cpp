@@ -25,8 +25,8 @@ using namespace std;
 // 兰佳晨
 // Encoded in CRLF UTF-8
 
-// 流键 13个byte
-// 时间戳 13个byte
+// 流键 8个byte
+// 时间戳 8个byte
 #ifndef SMALL_DATA
 const int ID_length = 8;
 const int TimeStamp_length = 8;
@@ -117,6 +117,11 @@ uint32_t test_hash_2(char *f)
     return AwareHash((unsigned char *)f, ID_length, 654289577, 654289631, 2354289697) % c + 1;
 }
 
+uint32_t heavy_hash(char *f)
+{
+    return AwareHash((unsigned char *)f, ID_length, 354289577, 354289631, 1754289697) % c + 1;
+}
+
 // double eta = 4.7875; 会导致大于10000 agree 的流被驱逐
 double eta = 4.8000;
 // double eta = 1;
@@ -126,8 +131,8 @@ struct flow_tin
     uint32_t agree;
     uint32_t disagree;
     bool ex;
-} heavy_flow[r + 1][c + 1];
-bool heavy_flag[r + 1][c + 1];
+} heavy_flow[c + 1];
+bool heavy_flag[c + 1];
 
 vector<ID_input> all_id_flow;
 vector<ID_input> smaller_id_flow;
@@ -143,51 +148,45 @@ double sigma_initial[l + 1];
 
 void Insert_Flow(ID_input f)
 {
-    int h[r + 1];
-    for (size_t i = 1; i <= r; i++)
-    {
-        h[i] = hash_function[i](f);
+    int h;
 
-        if (false == heavy_flag[i][h[i]])
+    h = heavy_hash(f);
+
+    if (false == heavy_flag[h])
+    {
+        heavy_flow[h].f = f;
+        heavy_flow[h].agree = 1;
+        heavy_flow[h].ex = false;
+        heavy_flow[h].disagree = 0;
+        heavy_flag[h] = true;
+    }
+    else
+    {
+        if (my_cmp(f.x, heavy_flow[h].f.x))
         {
-            heavy_flow[i][h[i]].f = f;
-            heavy_flow[i][h[i]].agree = 1;
-            heavy_flow[i][h[i]].ex = false;
-            heavy_flow[i][h[i]].disagree = 0;
-            heavy_flag[i][h[i]] = true;
+            heavy_flow[h].agree += 1;
         }
         else
         {
-            if (my_cmp(f.x, heavy_flow[i][h[i]].f.x))
+            heavy_flow[h].disagree += 1;
+            if (((double)heavy_flow[h].disagree / (double)heavy_flow[h].agree) < eta)
             {
-                heavy_flow[i][h[i]].agree += 1;
-                // if (heavy_flow[i][h[i]].agree > 10000)
-                // {
-                //     printf("flow > 10000\n");
-                // }
+                smaller_id_flow.push_back(f);
             }
             else
             {
-                heavy_flow[i][h[i]].disagree += 1;
-                if (((double)heavy_flow[i][h[i]].disagree / (double)heavy_flow[i][h[i]].agree) < eta)
+                if (heavy_flow[h].agree > 10000)
                 {
-                    smaller_id_flow.push_back(f);
+                    printf("flow > 10000 but it is expel\n");
                 }
-                else
+                for (size_t i = 0; i < heavy_flow[h].agree; i++)
                 {
-                    if (heavy_flow[i][h[i]].agree > 10000)
-                    {
-                        printf("flow > 10000 but it is expel\n");
-                    }
-                    for (size_t i = 0; i < heavy_flow[i][h[i]].agree; i++)
-                    {
-                        smaller_id_flow.push_back(heavy_flow[i][h[i]].f);
-                    }
-                    heavy_flow[i][h[i]].f = f;
-                    heavy_flow[i][h[i]].agree = 1;
-                    heavy_flow[i][h[i]].ex = true;
-                    heavy_flow[i][h[i]].disagree = 1;
+                    smaller_id_flow.push_back(heavy_flow[h].f);
                 }
+                heavy_flow[h].f = f;
+                heavy_flow[h].agree = 1;
+                heavy_flow[h].ex = true;
+                heavy_flow[h].disagree = 1;
             }
         }
     }
@@ -207,10 +206,10 @@ int Read_Flowdata()
     if (NULL != fin)
     {
         int k_count = 0;
-        while (fread(&tmp_five_tuple, TimeStamp_length, 1, fin)) // 读8byte
+        while (fread(&tmp_five_tuple, ID_length, 1, fin)) // 读8byte
         {
             // 跳过时间戳
-            fread(&tmp_five_tuple, ID_length, 1, fin);
+            fread(&tmp_five_tuple, TimeStamp_length, 1, fin);
             Insert_Flow(tmp_five_tuple);
             all_id_flow.push_back(tmp_five_tuple);
             k_count++;
@@ -219,7 +218,6 @@ int Read_Flowdata()
         fclose(fin);
 
 #ifdef DEBUG
-        // 约 2000 0000
         int test_a = smaller_id_flow.size();
 #endif // DEBUG
 
@@ -294,6 +292,7 @@ void set_bit(unsigned char *a, int pos, int v)
 
 void Flow2Sketch()
 {
+    memset(V,0,sizeof(V));
     uint32_t tmp_hash[r + 1];
     for (ID_input tmp_flow : smaller_id_flow)
     // for (ID_input tmp_flow : all_id_flow)
@@ -802,6 +801,7 @@ int main()
 
     if (0 == Read_Flowdata()) //流数据读入
     {
+        Flow2Sketch();
         // 加入heavy_flow
         {
             char tmp_bit_flow[l + 2];
@@ -811,48 +811,49 @@ int main()
             {
                 tmp_prob_vector[k] = 1;
             }
-            for (size_t i = 1; i <= r; i++)
+
+            for (size_t j = 1; j <= c; j++)
             {
-                for (size_t j = 1; j <= c; j++)
+                if (100000 > heavy_flow[j].agree)
                 {
-                    if (5000 > heavy_flow[i][j].agree)
+                    for (size_t i = 0; i < heavy_flow[j].agree; i++)
                     {
-                        for (size_t i = 0; i < heavy_flow[i][j].agree; i++)
-                        {
-                            smaller_id_flow.push_back(heavy_flow[i][j].f);
-                        }
-                        continue;
+                        smaller_id_flow.push_back(heavy_flow[j].f);
                     }
-                    for (size_t k = 1; k <= l; k++)
+                    continue;
+                }
+                for (size_t k = 1; k <= l; k++)
+                {
+                    tmp_bit_flow[k] = get_bit((unsigned char *)heavy_flow[j].f, k - 1);
+                }
+                if (heavy_flow[j].ex)
+                {
+                    tmp_sk_n = 0x7fffffff;
+                    int h[r + 1];
+                    for (size_t t_t = 1; t_t <= r; t_t++)
                     {
-                        tmp_bit_flow[k] = get_bit((unsigned char *)heavy_flow[i][j].f, k - 1);
+                        h[t_t] = hash_function[t_t](heavy_flow[j].f);
+                        tmp_sk_n = min(tmp_sk_n, V[0][t_t][h[t_t]]);
                     }
-                    if (heavy_flow[i][j].ex)
+                    for (size_t t_k = 1; t_k <= l; t_k++)
                     {
-                        tmp_sk_n = 0x7fffffff;
-                        int h[r + 1];
-                        for (size_t t_t = 1; t_t <= r; t_t++)
+                        if (get_bit(heavy_flow[j].f, t_k - 1))
                         {
-                            h[t_t] = hash_function[t_t](heavy_flow[i][j].f);
-                            tmp_sk_n = min(tmp_sk_n, V[0][t_t][h[t_t]]);
-                        }
-                        for (size_t t_k = 1; t_k <= l; t_k++)
-                        {
-                            if (get_bit(heavy_flow[i][j].f, t_k - 1))
+                            for (size_t t_t = 1; t_t <= r; t_t++)
                             {
-                                for (size_t t_t = 1; t_t <= r; t_t++)
-                                {
-                                    tmp_sk_n = min(tmp_sk_n, V[t_k][t_t][h[t_t]]);
-                                }
+                                tmp_sk_n = min(tmp_sk_n, V[t_k][t_t][h[t_t]]);
                             }
                         }
                     }
-                    else
-                    {
-                        tmp_sk_n = 0;
-                    }
-                    F.push_back(ans_t(tmp_bit_flow, heavy_flow[i][j].f, heavy_flow[i][j].agree + tmp_sk_n, tmp_prob_vector));
                 }
+                else
+                {
+                    tmp_sk_n = 0;
+                }
+
+                // tmp_sk_n = 0;
+
+                F.push_back(ans_t(tmp_bit_flow, heavy_flow[j].f, heavy_flow[j].agree + tmp_sk_n, tmp_prob_vector));
             }
         }
         // 流转sketch
