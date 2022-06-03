@@ -41,6 +41,7 @@ const int DATA_FILE_NUM = 10;     // 要读的文件个数
 double POSSIBLE_THRESHOLD = 0.99; // hat_p的阈值，论文里提供的是0.99
 const int STAR_THRESHOLD = 11;    // 如果一个正则表达式中超过了这么多个*，我们认为没有大流
 int THRESHOLD = 4000;             // 展示超过这么大的记录到的流
+int THRESHOLD_T2 = 9000;          // 展示超过这么大的记录到的流
 
 const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
 const double MY_ERROR_THRESHOLD_V0 = 0.95;    // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
@@ -51,7 +52,6 @@ const int r = 3;                        // sketch的行数
 const int c = 9000;                     // sketch的列数
 const int heavy_hash_length = 18000;    // heavy_flow的长度
 double eta = 50;                        // disagree / agree 比例
-double lowest_agree_ratio = 2.87915509; // 第一批最低计入大流的agree ratio
 
 //---------------------   在此调参   --------------------------//
 
@@ -710,12 +710,54 @@ struct two_int
     two_int() : i1(0), i2(0){};
 };
 
-int main()
-{
-#ifdef FILEOUT
-    freopen("out.txt", "w", stdout);
-#endif // FILEOUT
 
+double str2double(char* digit)
+{
+    unsigned int num = 0;
+    double  num1 = 0;
+    while (*digit != '\0')
+    {
+        if (*digit >= '0' && *digit <= '9')
+        {
+            num = num * 10 + (*digit - '0');
+            digit++;
+        }
+        else
+        {
+            if (*digit == '.')
+            {
+                digit++;
+                break;
+            }
+            else
+                num = 0;
+            break;
+        }
+    }
+    while(*digit != '\0')
+        digit++;
+    digit = digit - 1;
+    while (*digit != '.')
+    {
+        if (*digit >= '0' && *digit <= '9')
+        {
+            num1 = num1*0.1 + (*digit - '0');
+            digit--;
+        }
+        else
+        {
+            num1 = 0;
+            break;
+        }
+    }
+    return(num + num1*0.1);
+}
+
+int main(int argc, const char** argv)
+{
+    char eta_str[200];
+    strcpy(eta_str,argv[1]);
+    eta = str2double(eta_str);
     // 赋予哈希函数
     hash_function[1] = test_hash_0;
     hash_function[2] = test_hash_1;
@@ -723,11 +765,8 @@ int main()
     // F为所有大流集合，FF为每次循环找出的大流集合
     vector<ans_t> F;
 
-    int lowest_agree; // 第一批最低计入大流的agree number
-
     if (0 == Read_Flowdata()) //流数据读入
     {
-        lowest_agree = (int)(((double)k_count / (double)heavy_hash_length) * lowest_agree_ratio);
         {
             char tmp_bit_flow[l + 2];
             double tmp_prob_vector[l + 2];
@@ -739,14 +778,6 @@ int main()
 
             for (size_t j = 1; j <= heavy_hash_length; j++)
             {
-                // if (lowest_agree > heavy_flow[j].agree)
-                // {
-                //     for (size_t i = 0; i < heavy_flow[j].agree; i++)
-                //     {
-                //         smaller_id_flow.push_back(heavy_flow[j].f);
-                //     }
-                //     continue;
-                // }
                 for (size_t tmp_l = 1; tmp_l <= l; tmp_l++)
                 {
                     tmp_bit_flow[tmp_l] = (get_bit(heavy_flow[j].f, tmp_l - 1) == 1) ? '1' : '0';
@@ -849,7 +880,6 @@ int main()
             theta /= 2;
     }
 
-
 #ifdef DEBUG
     {
         class flow_debug
@@ -905,16 +935,29 @@ int main()
             flow_queue[x].ratio = (double)flow_queue[x].i1 / flow_queue[x].i2;
         }
         double error_rate = 0;
+        double error_rate_2 = 0;
+        double error_rate_3 = 0;
+        double error_rate_4 = 0;
+
         for (auto i : flow_queue)
         {
-            if (i.second.i1 > THRESHOLD || i.second.i2 > THRESHOLD)
+            if (i.second.i1 > THRESHOLD)
             {
                 error_rate += i.second.i1 * (i.second.ratio - 1.0) * (i.second.ratio - 1.0);
+                error_rate_2 +=(i.second.ratio - 1.0) * (i.second.ratio - 1.0);
+                if (i.second.i1 < THRESHOLD_T2)
+                {
+                    error_rate_3 += i.second.i1 * (i.second.ratio - 1.0) * (i.second.ratio - 1.0);
+                    error_rate_4 += (i.second.ratio - 1.0) * (i.second.ratio - 1.0);
+                }
             }
         }
 
-        printf("\nDEBUG END!!! \nTHRESHOLD: %d\nERROR RATIO: %lf\nPOSSIBLE_THRESHOLD: %lf\nSTAR_THRESHOLD: %d\nMY_ERROR_THRESHOLD_SKETCH: %lf\nMY_ERROR_THRESHOLD_V0: %lf\nSKETCH LENGTH: %d, HEIGHT: %d, WIDTH: %d\n",
-               THRESHOLD, error_rate, POSSIBLE_THRESHOLD, STAR_THRESHOLD, MY_ERROR_THRESHOLD_SKETCH, MY_ERROR_THRESHOLD_V0, l, r, c);
+        char OutName[100];
+        sprintf(OutName, "./out.txt");
+        FILE *fout = fopen(OutName, "w");
+        fprintf(fout,"%lf,%lf,%lf,%lf,%lf\n",eta,error_rate,error_rate_2,error_rate_3,error_rate_4);
+        fclose(fout);
         return 0;
     }
 #endif // DEBUG
