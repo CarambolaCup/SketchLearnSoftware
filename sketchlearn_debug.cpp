@@ -17,7 +17,7 @@ using namespace std;
 #define DEBUG
 //#define OVERALL_DEBUG //比较所有流
 #define LOCAL_DEBUG //比较捕获了的流
-//#define PRINT_RESULT //是否输出完整结果
+#define PRINT_RESULT //是否输出完整结果
 //#define PRINT_LOOP_TIMES//最后输出loop的次数
 //#define PRINT_TERMINATE_DATA//输出TERMINATE的数据
 //#define PRINT_CAUGHT_FLOW_NUM//每捕获100个流输出一条消息
@@ -37,7 +37,7 @@ const int TimeStamp_length = 0;
 
 //---------------------   在此调参   --------------------------//
 
-const int DATA_FILE_NUM = 10;// 要读的文件个数
+const int DATA_FILE_NUM = 1;// 要读的文件个数
 int THRESHOLD = 4000;// 展示超过这么大的记录到的流
 
 double POSSIBLE_THRESHOLD = 0.99;// hat_p的阈值，论文里提供的是0.99
@@ -722,6 +722,25 @@ struct two_int
     two_int() : i1(0), i2(0) {};
 };
 
+void my_debug(const char* str)
+{
+        for(int i=1;i<=r;i++)
+        {
+            for(int j=1;j<=c;j++)
+            {
+                for(int k=1;k<=l;k++)
+                {
+                    if(V[0][i][j]<V[k][i][j])
+                    {
+                        printf("NOOOOOOOOOOOOOOOOOOOOOO--------------%s\n",str);
+                        return;
+                    }
+                }
+            }
+        }
+
+}
+
 int main()
 {
 #ifdef FILEOUT
@@ -756,6 +775,7 @@ int main()
     int nnnn = 1;
     while (1)
     {
+        printf("loop %d start!\n",nnnn);
         int my_flow_num = 0;
         vector<ans_t> FF;
         for (int i = 1; i <= r; i++)
