@@ -17,7 +17,7 @@ using namespace std;
 #define DEBUG
 //#define OVERALL_DEBUG //比较所有流
 #define LOCAL_DEBUG  //比较捕获了的流
-#define PRINT_RESULT //是否输出完整结果
+// #define PRINT_RESULT //是否输出完整结果
 //#define PRINT_LOOP_TIMES//最后输出loop的次数
 //#define PRINT_TERMINATE_DATA//输出TERMINATE的数据
 //#define PRINT_CAUGHT_FLOW_NUM//每捕获100个流输出一条消息
@@ -49,6 +49,12 @@ const double MY_ERROR_THRESHOLD_V0 = 0.95;    // 如果估值高过最小sketch�
 const int l = 8 * ID_length; // 流的bit数
 const int r = 3;             // sketch的行数
 const int c = 5000;          // sketch的列数
+
+const int lowest_agree = 100000;
+// double eta = 4.7875; 会导致大于10000 agree 的流被驱逐
+double eta = 4.8000;
+// double eta = 10;
+// double eta = 1;
 
 //---------------------   在此调参   --------------------------//
 
@@ -122,9 +128,7 @@ uint32_t heavy_hash(char *f)
     return AwareHash((unsigned char *)f, ID_length, 354289577, 354289631, 1754289697) % c + 1;
 }
 
-// double eta = 4.7875; 会导致大于10000 agree 的流被驱逐
-double eta = 4.8000;
-// double eta = 1;
+
 struct flow_tin
 {
     ID_input f;
@@ -814,7 +818,7 @@ int main()
 
             for (size_t j = 1; j <= c; j++)
             {
-                if (100000 > heavy_flow[j].agree)
+                if (lowest_agree > heavy_flow[j].agree)
                 {
                     for (size_t i = 0; i < heavy_flow[j].agree; i++)
                     {
