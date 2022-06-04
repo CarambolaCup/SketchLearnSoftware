@@ -13,11 +13,11 @@ using namespace std;
 #pragma warning(disable : 4996)
 
 //#define FILEOUT
-//#define SMALL_DATA //小数据测试开关
+#define SMALL_DATA //小数据测试开关
 #define DEBUG
 //#define OVERALL_DEBUG //比较所有流
 #define LOCAL_DEBUG //比较捕获了的流
-// #define PRINT_RESULT //是否输出完整结果
+#define PRINT_RESULT //是否输出完整结果
 //#define PRINT_LOOP_TIMES//最后输出loop的次数
 //#define PRINT_TERMINATE_DATA//输出TERMINATE的数据
 //#define PRINT_CAUGHT_FLOW_NUM//每捕获100个流输出一条消息
@@ -40,7 +40,7 @@ const int TimeStamp_length = 0;
 const int DATA_FILE_NUM = 10;     // 要读的文件个数
 double POSSIBLE_THRESHOLD = 0.99; // hat_p的阈值，论文里提供的是0.99
 const int STAR_THRESHOLD = 11;    // 如果一个正则表达式中超过了这么多个*，我们认为没有大流
-int THRESHOLD = 4000;             // 展示超过这么大的记录到的流
+int THRESHOLD = 10000;             // 展示超过这么大的记录到的流
 
 const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
 const double MY_ERROR_THRESHOLD_V0 = 0.95;    // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
@@ -209,6 +209,94 @@ int k_count = 0; // 统计流总数
 int Read_Flowdata()
 {
     char datafileName[100];
+    // ע���ļ�·��
+    int read_file_no;
+#ifndef SMALL_DATA
+    read_file_no = 1;
+    sprintf(datafileName, "./formatted00.dat");
+#else
+    read_file_no = 11;
+    sprintf(datafileName, "./data/0.dat");
+#endif
+
+    ID_input tmp_five_tuple;
+    for(int i = 0; i < read_file_no; i++)
+    {
+        printf("READ %d FILES!\n", i);
+        #ifdef SMALL_DATA
+        sprintf(datafileName, "./data/%d.dat",i);
+        #endif// SMALL_DATA
+        FILE* fin = fopen(datafileName, "rb");
+        if (NULL != fin)
+        {
+            int buggy_num = 0;
+            fread(&tmp_five_tuple, TimeStamp_length, 1, fin);
+            while (fread(&tmp_five_tuple, ID_length, 1, fin)) // ��8byte
+            {
+                // ����ʱ���
+                Insert_Flow(tmp_five_tuple);
+                all_id_flow.push_back(tmp_five_tuple);
+                if(my_debug_cmp(tmp_five_tuple.x))
+                {
+                    printf("GOT BUGGY FLOW! SIZE: %d\n",++buggy_num);
+                }
+                k_count++;
+                fread(&tmp_five_tuple, TimeStamp_length, 1, fin);
+            }
+
+            fclose(fin);
+
+    #ifdef DEBUG
+            int test_a = smaller_id_flow.size();
+    #endif // DEBUG
+
+        }
+        else
+        {
+            return -1;
+        }
+    }
+    return 0;
+/*
+#else
+    for (int kk = 0; kk <= DATA_FILE_NUM; kk++)
+    {
+        sprintf(datafileName, "./data/%d.dat", kk);
+
+        ID_input tmp_five_tuple;
+
+        FILE* fin = fopen(datafileName, "rb");
+        if (NULL != fin)
+        {
+            int k_count = 0;
+            while (fread(&tmp_five_tuple, ID_length, 1, fin)) // ��13byte
+            {
+                smaller_id_flow.push_back(tmp_five_tuple);
+                k_count++;
+            }
+
+            fclose(fin);
+
+#ifdef DEBUG
+            // Լ 2000 0000
+            int test_a = smaller_id_flow.size();
+            printf("READ %d FLOWS, %d TIMES\n", test_a, kk);
+#endif // DEBUG
+        }
+        else
+        {
+            return -1;
+        }
+    }
+    return 0;
+    // sprintf(datafileName, "./data/all1.dat");
+#endif // !SMALL_DATA
+*/
+}
+/*
+int Read_Flowdata()
+{
+    char datafileName[100];
     // 注意文件路径
 #ifndef SMALL_DATA
     sprintf(datafileName, "./formatted00.dat");
@@ -273,6 +361,7 @@ int Read_Flowdata()
     // sprintf(datafileName, "./data/all1.dat");
 #endif // !SMALL_DATA
 }
+*/
 
 //使用了大端法
 int get_bit(unsigned char *a, int pos)

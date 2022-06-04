@@ -13,7 +13,7 @@ using namespace std;
 #pragma warning(disable : 4996)
 
 //#define FILEOUT
-//#define SMALL_DATA //小数据测试开关
+#define SMALL_DATA //小数据测试开关
 #define DEBUG
 //#define OVERALL_DEBUG //比较所有流
 #define LOCAL_DEBUG //比较捕获了的流
@@ -37,8 +37,8 @@ const int TimeStamp_length = 0;
 
 //---------------------   在此调参   --------------------------//
 
-const int DATA_FILE_NUM = 1;// 要读的文件个数
-int THRESHOLD = 4000;// 展示超过这么大的记录到的流
+const int DATA_FILE_NUM = 10;// 要读的文件个数
+int THRESHOLD = 10000;// 展示超过这么大的记录到的流
 
 double POSSIBLE_THRESHOLD = 0.99;// hat_p的阈值，论文里提供的是0.99
 const int STAR_THRESHOLD = 11;// 如果一个正则表达式中超过了这么多个*，我们认为没有大流
@@ -935,7 +935,7 @@ int main()
         double error_rate = 0;
         for (auto i : flow_queue)
         {
-            if(i.second.i1 > THRESHOLD || i.second.i2 > THRESHOLD)
+            if((i.second.i1 > THRESHOLD))
             {
                 //Flow_out(i.first);
                 #ifdef PRINT_RESULT

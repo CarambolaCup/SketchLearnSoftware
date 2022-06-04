@@ -13,20 +13,20 @@ using namespace std;
 #pragma warning(disable : 4996)
 
 //#define FILEOUT
-//#define SMALL_DATA //Ð¡Êý¾Ý²âÊÔ¿ª¹Ø
+#define SMALL_DATA //Ð¡ï¿½ï¿½ï¿½Ý²ï¿½ï¿½Ô¿ï¿½ï¿½ï¿½
 #define DEBUG
-//#define OVERALL_DEBUG //±È½ÏËùÓÐÁ÷
-#define LOCAL_DEBUG //±È½Ï²¶»ñÁËµÄÁ÷
-// #define PRINT_RESULT //ÊÇ·ñÊä³öÍêÕû½á¹û
-//#define PRINT_LOOP_TIMES//×îºóÊä³öloopµÄ´ÎÊý
-//#define PRINT_TERMINATE_DATA//Êä³öTERMINATEµÄÊý¾Ý
-//#define PRINT_CAUGHT_FLOW_NUM//Ã¿²¶»ñ100¸öÁ÷Êä³öÒ»ÌõÏûÏ¢
+//#define OVERALL_DEBUG //ï¿½È½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+#define LOCAL_DEBUG //ï¿½È½Ï²ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½
+#define PRINT_RESULT //ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//#define PRINT_LOOP_TIMES//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½loopï¿½Ä´ï¿½ï¿½ï¿½
+//#define PRINT_TERMINATE_DATA//ï¿½ï¿½ï¿½TERMINATEï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//#define PRINT_CAUGHT_FLOW_NUM//Ã¿ï¿½ï¿½ï¿½ï¿½100ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ï¢
 
-// À¼¼Ñ³¿
+// ï¿½ï¿½ï¿½Ñ³ï¿½
 // Encoded in CRLF UTF-8
 
-// Á÷¼ü 8¸öbyte
-// Ê±¼ä´Á 8¸öbyte
+// ï¿½ï¿½ï¿½ï¿½ 8ï¿½ï¿½byte
+// Ê±ï¿½ï¿½ï¿½ 8ï¿½ï¿½byte
 #ifndef SMALL_DATA
 const int ID_length = 8;
 const int TimeStamp_length = 8;
@@ -35,40 +35,46 @@ const int ID_length = 13;
 const int TimeStamp_length = 0;
 #endif // !SMALL_DATA
 
-//---------------------   ÔÚ´Ëµ÷²Î   --------------------------//
+//---------------------   ï¿½Ú´Ëµï¿½ï¿½ï¿½   --------------------------//
 
-const int DATA_FILE_NUM = 10;     // Òª¶ÁµÄÎÄ¼þ¸öÊý
-double POSSIBLE_THRESHOLD = 0.99; // hat_pµÄãÐÖµ£¬ÂÛÎÄÀïÌá¹©µÄÊÇ0.99
-const int STAR_THRESHOLD = 11;    // Èç¹ûÒ»¸öÕýÔò±í´ïÊ½ÖÐ³¬¹ýÁËÕâÃ´¶à¸ö*£¬ÎÒÃÇÈÏÎªÃ»ÓÐ´óÁ÷
-int THRESHOLD = 4000;             // Õ¹Ê¾³¬¹ýÕâÃ´´óµÄ¼ÇÂ¼µ½µÄÁ÷
+const int DATA_FILE_NUM = 10;     // Òªï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½
+double POSSIBLE_THRESHOLD = 0.99; // hat_pï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á¹©ï¿½ï¿½ï¿½ï¿½0.99
+const int STAR_THRESHOLD = 11;    // ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½Ð³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÎªÃ»ï¿½Ð´ï¿½ï¿½ï¿½
+int THRESHOLD = 10000;             // Õ¹Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½Ä¼ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // Èç¹û¹ÀÖµ¸ß¹ý×îÐ¡sketchµÄÕâÃ´¶à±¶£¬ÔòÈÏÎªºÜ¿ÉÄÜÊÇ¼ÙÑôÐÔ
-const double MY_ERROR_THRESHOLD_V0 = 0.95;    // Èç¹û¹ÀÖµ¸ß¹ý×îÐ¡sketchµÄÕâÃ´¶à±¶£¬ÔòÈÏÎªºÜ¿ÉÄÜÊÇ¼ÙÑôÐÔ
+const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ß¹ï¿½ï¿½ï¿½Ð¡sketchï¿½ï¿½ï¿½ï¿½Ã´ï¿½à±¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½Ü¿ï¿½ï¿½ï¿½ï¿½Ç¼ï¿½ï¿½ï¿½ï¿½ï¿½
+const double MY_ERROR_THRESHOLD_V0 = 0.95;    // ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ß¹ï¿½ï¿½ï¿½Ð¡sketchï¿½ï¿½ï¿½ï¿½Ã´ï¿½à±¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½Ü¿ï¿½ï¿½ï¿½ï¿½Ç¼ï¿½ï¿½ï¿½ï¿½ï¿½
 
-// ½«l,r,c²ÎÊý¼°hashº¯ÊýÌáÇ°,ÒÔ·½±ãÊ¹ÓÃ
-const int l = 8 * ID_length;            // Á÷µÄbitÊý
-const int r = 3;                        // sketchµÄÐÐÊý
-const int c = 9000;                     // sketchµÄÁÐÊý
-const int heavy_hash_length = 18000;    // heavy_flowµÄ³¤¶È
-double eta = 50;                        // disagree / agree ±ÈÀý
-double lowest_agree_ratio = 2.87915509; // µÚÒ»Åú×îµÍ¼ÆÈë´óÁ÷µÄagree ratio
+// ï¿½ï¿½l,r,cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½hashï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°,ï¿½Ô·ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½
+const int l = 8 * ID_length;            // ï¿½ï¿½ï¿½ï¿½bitï¿½ï¿½
+const int r = 3;                        // sketchï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+const int c = 9000;                     // sketchï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+const int heavy_hash_length = 18000;    // heavy_flowï¿½Ä³ï¿½ï¿½ï¿½
+double eta = 50;                        // disagree / agree ï¿½ï¿½ï¿½ï¿½
+double lowest_agree_ratio = 2.87915509; // ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½agree ratio
 
 const double bit_ostracism_lamda = 0.01;
 int bit_ostracism_0[l + 1], bit_ostracism_1[l + 1];
 bool Is_kth_freed[l + 1] = { false };
 int ostracism_est[l + 1];
-//---------------------   ÔÚ´Ëµ÷²Î   --------------------------//
+//---------------------   ï¿½Ú´Ëµï¿½ï¿½ï¿½   --------------------------//
+
+char my_buggy_flow[ID_length] = {-114, -95, 23, 76, -58, 88, -37, 49};
+
+int get_bit(unsigned char* a, int pos);
 
 bool my_debug_cmp(char* s)
 {
-    return (s[0] == -126 &&
-        s[1] == 48 &&
-        s[2] == 57 &&
-        s[3] == -121 &&
-        s[4] == 43 &&
-        s[5] == -4 &&
-        s[6] == -32 &&
-        s[7] == -122);
+    for(int i = 0; i < ID_length; i++)
+    {
+        if(s[i] != my_buggy_flow[i])
+        {
+            return false;
+        }
+    }
+    int buggy_bit = 40;
+    printf("THE %d BIT IS: %d",buggy_bit, get_bit((unsigned char *)my_buggy_flow, buggy_bit - 1));
+    return true;
 }
 
 bool my_cmp(char*, char*);
@@ -105,7 +111,7 @@ public:
     }
 };
 
-// h1,h2...,hr ÏÂ±ê´Ó1¿ªÊ¼
+// h1,h2...,hr ï¿½Â±ï¿½ï¿½1ï¿½ï¿½Ê¼
 uint32_t(*hash_function[r + 1])(char*);
 
 uint64_t AwareHash(unsigned char* data, uint64_t n,
@@ -121,8 +127,8 @@ uint64_t AwareHash(unsigned char* data, uint64_t n,
     return hash ^ hardener;
 }
 
-// ²âÊÔ¹þÏ£º¯Êý£¬Áù¸öÖÊÊýÎªËæ»úÑ¡È¡
-// ¹þÏ£·µ»ØÎª1 ~ c
+// ï¿½ï¿½ï¿½Ô¹ï¿½Ï£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ñ¡È¡
+// ï¿½ï¿½Ï£ï¿½ï¿½ï¿½ï¿½Îª1 ~ c
 uint32_t test_hash_0(char* f)
 {
     return AwareHash((unsigned char*)f, ID_length, 354289553, 354289627, 1054289603) % c + 1;
@@ -152,13 +158,13 @@ bool heavy_flag[heavy_hash_length + 1];
 
 vector<ID_input> all_id_flow;
 vector<ID_input> smaller_id_flow;
-// °´V[k][i][j]ÅÅÁÐ k = 0 Îª×ÜµÄ²ã i j ¶¼´Ó1¿ªÊ¼
+// ï¿½ï¿½V[k][i][j]ï¿½ï¿½ï¿½ï¿½ k = 0 Îªï¿½ÜµÄ²ï¿½ i j ï¿½ï¿½ï¿½ï¿½1ï¿½ï¿½Ê¼
 unsigned int V[l + 1][r + 1][c + 1];
 unsigned int V_initial[l + 1][r + 1][c + 1];
-// ¾ùÖµ
+// ï¿½ï¿½Öµ
 double p[l + 1];
 double p_initial[l + 1];
-// ±ê×¼²î,×¢ÒâÊÇ·½²î¿ª·½
+// ï¿½ï¿½×¼ï¿½ï¿½,×¢ï¿½ï¿½ï¿½Ç·ï¿½ï¿½î¿ªï¿½ï¿½
 double sigma[l + 1];
 double sigma_initial[l + 1];
 
@@ -208,41 +214,60 @@ void Insert_Flow(ID_input f)
     }
 }
 
-int k_count = 0; // Í³¼ÆÁ÷×ÜÊý
+int k_count = 0; // Í³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //.dat ×ª vector<ID>
 int Read_Flowdata()
 {
     char datafileName[100];
-    // ×¢ÒâÎÄ¼þÂ·¾¶
+    // ×¢ï¿½ï¿½ï¿½Ä¼ï¿½Â·ï¿½ï¿½
+    int read_file_no;
 #ifndef SMALL_DATA
+    read_file_no = 1;
     sprintf(datafileName, "./formatted00.dat");
+#else
+    read_file_no = 11;
+    sprintf(datafileName, "./data/0.dat");
+#endif
 
     ID_input tmp_five_tuple;
-
-    FILE* fin = fopen(datafileName, "rb");
-    if (NULL != fin)
+    for(int i = 0; i < read_file_no; i++)
     {
-        while (fread(&tmp_five_tuple, TimeStamp_length, 1, fin)) // ¶Á8byte
+        printf("READ %d FILES!\n", i);
+        #ifdef SMALL_DATA
+        sprintf(datafileName, "./data/%d.dat",i);
+        #endif// SMALL_DATA
+        FILE* fin = fopen(datafileName, "rb");
+        if (NULL != fin)
         {
-            // Ìø¹ýÊ±¼ä´Á
-            fread(&tmp_five_tuple, ID_length, 1, fin);
-            Insert_Flow(tmp_five_tuple);
-            all_id_flow.push_back(tmp_five_tuple);
-            k_count++;
+            int buggy_num = 0;
+            fread(&tmp_five_tuple, TimeStamp_length, 1, fin);
+            while (fread(&tmp_five_tuple, ID_length, 1, fin)) // ï¿½ï¿½8byte
+            {
+                // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½
+                Insert_Flow(tmp_five_tuple);
+                all_id_flow.push_back(tmp_five_tuple);
+                if(my_debug_cmp(tmp_five_tuple.x))
+                {
+                    printf("GOT BUGGY FLOW! SIZE: %d\n",++buggy_num);
+                }
+                k_count++;
+                fread(&tmp_five_tuple, TimeStamp_length, 1, fin);
+            }
+
+            fclose(fin);
+
+    #ifdef DEBUG
+            int test_a = smaller_id_flow.size();
+    #endif // DEBUG
+
         }
-
-        fclose(fin);
-
-#ifdef DEBUG
-        int test_a = smaller_id_flow.size();
-#endif // DEBUG
-
-        return 0;
+        else
+        {
+            return -1;
+        }
     }
-    else
-    {
-        return -1;
-    }
+    return 0;
+/*
 #else
     for (int kk = 0; kk <= DATA_FILE_NUM; kk++)
     {
@@ -254,7 +279,7 @@ int Read_Flowdata()
         if (NULL != fin)
         {
             int k_count = 0;
-            while (fread(&tmp_five_tuple, ID_length, 1, fin)) // ¶Á13byte
+            while (fread(&tmp_five_tuple, ID_length, 1, fin)) // ï¿½ï¿½13byte
             {
                 smaller_id_flow.push_back(tmp_five_tuple);
                 k_count++;
@@ -276,9 +301,10 @@ int Read_Flowdata()
     return 0;
     // sprintf(datafileName, "./data/all1.dat");
 #endif // !SMALL_DATA
+*/
 }
 
-//Ê¹ÓÃÁË´ó¶Ë·¨
+//Ê¹ï¿½ï¿½ï¿½Ë´ï¿½Ë·ï¿½
 int get_bit(unsigned char* a, int pos)
 {
     int byte = pos / 8;
@@ -320,7 +346,7 @@ void Flow2Sketch()
         }
         for (size_t k = 1; k <= ID_length * 8; k++)
         {
-            // 0 Ôò¶Ô V[k] ÎÞÓ°Ïì
+            // 0 ï¿½ï¿½ï¿½ V[k] ï¿½ï¿½Ó°ï¿½ï¿½
             if (0 != get_bit((unsigned char*)tmp_flow, k - 1))
             {
                 bit_ostracism_1[k]++;
@@ -335,17 +361,17 @@ void Flow2Sketch()
     for (size_t k = 1; k <= ID_length * 8; k++)
     {
         double k_lamda = (double)bit_ostracism_0[k] / (double)(bit_ostracism_1[k] + 1);
-        //printf("bit_ostracism_0[%d]=%d, bit_ostracism_1[%d]=%d, k_lamda=%lf \n", (int)k, bit_ostracism_0[k], (int)k, bit_ostracism_1[k], k_lamda);
+        printf("bit_ostracism_0[%d]=%d, bit_ostracism_1[%d]=%d, k_lamda=%lf \n", (int)k, bit_ostracism_0[k], (int)k, bit_ostracism_1[k], k_lamda);
         if (k_lamda < bit_ostracism_lamda) {
             Is_kth_freed[k] = true;
             ostracism_est[k] = 1;
-            //printf("Is_kth_freed[%d] is true, ostracism_est[%d] is %d\n", (int)k,(int)k, ostracism_est[k]);
+            printf("Is_kth_freed[%d] is true, ostracism_est[%d] is %d\n", (int)k,(int)k, ostracism_est[k]);
             //printf("bit_ostracism_0[%d]=%d, bit_ostracism_1[%d]=%d\n", (int)k, bit_ostracism_0[k], (int)k, bit_ostracism_1[k]);
         }
         if (k_lamda > 1.0 / bit_ostracism_lamda) {
             Is_kth_freed[k] = true;
             ostracism_est[k] = 0;
-            //printf("Is_kth_freed[%d] is true,ostracism_est[%d] is %d\n", (int)k, (int)k, ostracism_est[k]);
+            printf("Is_kth_freed[%d] is true,ostracism_est[%d] is %d\n", (int)k, (int)k, ostracism_est[k]);
             //printf("bit_ostracism_0[%d]=%d,bit_ostracism_1[%d]=%d\n", (int)k, bit_ostracism_0[k], (int)k, bit_ostracism_1[k]);
         }
     }
@@ -388,10 +414,10 @@ void Sketch2N_p_sigma()
     }
 }
 
-// ÑîÊË²©£º´úÂëÀïbit_flow¡¢prob_vector¡¢Ã¿bit¸ÅÂÊÊÇ´Ó1¿ªÊ¼µÄ£¬ÒÔÆõºÏËã·¨ÖÐµÄ±íÊö
-//         flowÊÇ´Ó0¿ªÊ¼µÄ£¬ÒÔÆõºÏ¸ø¶¨µÄÊý¾ÝºÍ¹þÏ£º¯Êý
+// ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½bit_flowï¿½ï¿½prob_vectorï¿½ï¿½Ã¿bitï¿½ï¿½ï¿½ï¿½ï¿½Ç´ï¿½1ï¿½ï¿½Ê¼ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ã·¨ï¿½ÐµÄ±ï¿½ï¿½ï¿½
+//         flowï¿½Ç´ï¿½0ï¿½ï¿½Ê¼ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÝºÍ¹ï¿½Ï£ï¿½ï¿½ï¿½ï¿½
 
-double normalCFD(double value) // ¼ÆËã±ê×¼ÕýÌ¬·Ö²¼
+double normalCFD(double value) // ï¿½ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½Ì¬ï¿½Ö²ï¿½
 {
     /*
     printf("------------------------------VAL1: %lf\n", value);
@@ -401,12 +427,12 @@ double normalCFD(double value) // ¼ÆËã±ê×¼ÕýÌ¬·Ö²¼
     return 0.5 * erfc(-value / sqrt(2));
 }
 
-struct ans_t // ÊÇextract large flow·µ»ØÏòÁ¿ÖÐÔªËØµÄtype
+struct ans_t // ï¿½ï¿½extract large flowï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôªï¿½Øµï¿½type
 {
-    char bit_flow[l + 2];       // Õâ¸öÊÇÓÃ1¸öbyteµÄ'0'»ò'1'±íÊ¾1¸öbit
-    char flow[(l + 7) / 8 + 1]; // Õâ¸öÊÇ¸úÔ´Êý¾ÝÏàÍ¬µÄ½á¹¹
-    unsigned int size;          // Á÷µÄ´óÐ¡
-    double prob_vector[l + 2];  // ¿ÉÄÜÐÔÏòÁ¿
+    char bit_flow[l + 2];       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½1ï¿½ï¿½byteï¿½ï¿½'0'ï¿½ï¿½'1'ï¿½ï¿½Ê¾1ï¿½ï¿½bit
+    char flow[(l + 7) / 8 + 1]; // ï¿½ï¿½ï¿½ï¿½Ç¸ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½Ä½á¹¹
+    unsigned int size;          // ï¿½ï¿½ï¿½Ä´ï¿½Ð¡
+    double prob_vector[l + 2];  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     ans_t(char* bbit_flow, char* fflow, unsigned int ssize = 0, double* pprob_vector = NULL)
     {
         strcpy(bit_flow, bbit_flow);
@@ -426,7 +452,7 @@ struct ans_t // ÊÇextract large flow·µ»ØÏòÁ¿ÖÐÔªËØµÄtype
 };
 
 double cal_hat_p(double theta, int i, int j,
-    unsigned int V[][r + 1][c + 1], double* p, double* sigama, int k) // ¼ÆËã´óÁ÷µÚk¸öbitÎª1µÄ¸ÅÂÊ
+    unsigned int V[][r + 1][c + 1], double* p, double* sigama, int k) // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½kï¿½ï¿½bitÎª1ï¿½Ä¸ï¿½ï¿½ï¿½
 {
     if (Is_kth_freed[k]) {
         if (ostracism_est[k] == 0)return 0;
@@ -460,7 +486,7 @@ double cal_hat_p(double theta, int i, int j,
 }
 
 double cal_hat_p_print(double theta, int i, int j,
-    unsigned int V[][r + 1][c + 1], double* p, double* sigama, int k) // ¼ÆËã´óÁ÷µÚk¸öbitÎª1µÄ¸ÅÂÊ
+    unsigned int V[][r + 1][c + 1], double* p, double* sigama, int k) // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½kï¿½ï¿½bitÎª1ï¿½Ä¸ï¿½ï¿½ï¿½
 {
     if (Is_kth_freed[k]) {
         if (ostracism_est[k] == 0)return 0;
@@ -493,10 +519,10 @@ double cal_hat_p_print(double theta, int i, int j,
     return normal_val1 * p[k] + (1 - normal_val0) * (1 - p[k]);
 }
 
-struct two_types_of_flow // Á½ÖÖÁ÷±íÊ¾
+struct two_types_of_flow // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾
 {
-    char bit_flow[l + 2];       // Ò»¸ö'1'»òÕß'0'±íÊ¾Ò»¸öbit
-    char flow[(l + 7) / 8 + 1]; // Ó¦¸ÃÊÇºÍ¸ø¶¨µÄÊý¾ÝÒ»ÑùµÄ½á¹¹(²»ÖªµÀ»á²»»áÓÐbug...)
+    char bit_flow[l + 2];       // Ò»ï¿½ï¿½'1'ï¿½ï¿½ï¿½ï¿½'0'ï¿½ï¿½Ê¾Ò»ï¿½ï¿½bit
+    char flow[(l + 7) / 8 + 1]; // Ó¦ï¿½ï¿½ï¿½ÇºÍ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ä½á¹¹(ï¿½ï¿½Öªï¿½ï¿½ï¿½á²»ï¿½ï¿½ï¿½ï¿½bug...)
     two_types_of_flow(char* bbit_flow, char* fflow)
     {
         strcpy(bit_flow, bbit_flow);
@@ -508,14 +534,14 @@ struct two_types_of_flow // Á½ÖÖÁ÷±íÊ¾
     }
 };
 
-vector<two_types_of_flow> possible_flows; // Ò»¸ö¸¨Öúº¯ÊýµÄÈ«¾Ö±äÁ¿
-char current_T[l + 2];                    // Ò»¸ö¸¨Öúº¯ÊýµÄÈ«¾Ö±äÁ¿
+vector<two_types_of_flow> possible_flows; // Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½Ö±ï¿½ï¿½ï¿½
+char current_T[l + 2];                    // Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½Ö±ï¿½ï¿½ï¿½
 
 int flag_ = 0;
 
 int loop_num = 0;
 
-void find_possible_flows(int i, int j, int k, char* T) // ÕÒµ½ÕýÔò±í´ïÊ½ÖÐËùÓÐ¿ÉÄÜµÄÁ÷
+void find_possible_flows(int i, int j, int k, char* T) // ï¿½Òµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¿ï¿½ï¿½Üµï¿½ï¿½ï¿½
 {
     if (k == l + 1)
     {
@@ -578,25 +604,25 @@ void find_possible_flows(int i, int j, int k, char* T) // ÕÒµ½ÕýÔò±í´ïÊ½ÖÐËùÓÐ¿É
     return;
 }
 
-/* ·µ»Øans_tµÄÒ»¸öÏòÁ¿£¬Ã¿¸öÔªËØ´æ´¢ÁË£º
+/* ï¿½ï¿½ï¿½ï¿½ans_tï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½Ôªï¿½Ø´æ´¢ï¿½Ë£ï¿½
  *
- *      ÓÃbyte±íÊ¾bitµÄÁ÷¼ü
- *      ºÍÊäÈëÊý¾ÝÍ¬½á¹¹µÄÁ÷¼ü
- *      Á÷µÄ´óÐ¡
- *      ¿ÉÄÜÐÔÏòÁ¿
+ *      ï¿½ï¿½byteï¿½ï¿½Ê¾bitï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *      ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½á¹¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *      ï¿½ï¿½ï¿½Ä´ï¿½Ð¡
+ *      ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  *
  */
 vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     unsigned int V[][r + 1][c + 1], double* p, double* sigama)
 {
-    // µÚÒ»²½£¬¼ÆËãÃ¿¸öbitµÄ¸ÅÂÊ¹ÀÖµ
+    // ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½bitï¿½Ä¸ï¿½ï¿½Ê¹ï¿½Öµ
     double hat_p[l + 1];
     for (int k = 1; k <= l; k++)
     {
         hat_p[k] = cal_hat_p(theta, i, j, V, p, sigama, k);
     }
     // printf("V[%d][%d] step 1 completed\n", i, j);
-    //  µÚ¶þ²½£¬ÕÒµ½ËùÓÐºòÑ¡µÄ´óÁ÷£¬´æÔÚpossible_flowsÀïÃæ
+    //  ï¿½Ú¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½Ðºï¿½Ñ¡ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½possible_flowsï¿½ï¿½ï¿½ï¿½
     char T[l + 2];
     for (int k = 1; k <= l; k++)
     {
@@ -638,7 +664,7 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     possible_flows.clear();
     find_possible_flows(i, j, 1, T);
     // printf("V[%d][%d] step 2 completed\n", i, j);
-    //  µÚÈý²½£¬¹À¼Æ´óÁ÷µÄÆµÂÊºÍ¿ÉÄÜÐÔÏòÁ¿
+    //  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ´ï¿½ï¿½ï¿½ï¿½ï¿½Æµï¿½ÊºÍ¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     vector<double> estimated_frequency;
     double estimated_p[l + 1];
     for (vector<two_types_of_flow>::iterator item = possible_flows.begin();
@@ -708,7 +734,7 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
         // Flow_out(result.back().flow);
     }
     // printf("V[%d][%d] step 3 completed\n", i, j);
-    //  µÚËÄ²½£¬È¥sketchÀï²éºòÑ¡Á÷µÄÊý¾Ý£¬É¾µô¹ýÐ¡µÄ
+    //  ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½È¥sketchï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½É¾ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½
     if (r == 1)
     {
         return result;
@@ -751,7 +777,7 @@ vector<ans_t> ExtractLargeFlows(double theta, int i, int j,
     return result;
 }
 
-//´ÓsketchÖÐÉ¾È¥´óÁ÷
+//ï¿½ï¿½sketchï¿½ï¿½É¾È¥ï¿½ï¿½ï¿½ï¿½
 void RemoveFlows(vector<ans_t> FF)
 {
     int FF_size = FF.size();
@@ -778,8 +804,8 @@ void RemoveFlows(vector<ans_t> FF)
     }
 }
 
-//¼ì²éµ±Ç°sketchÊÇ·ñ·ûºÏ¸ßË¹·Ö²¼
-//ÎÒÀí½âµÄÊÇËùÓÐL¸ösketchÃ¿Ò»¸ö¶¼·ûºÏ1sigma,2sigma,3sigmaµÄÊýÁ¿ÒªÇó
+//ï¿½ï¿½éµ±Ç°sketchï¿½Ç·ï¿½ï¿½ï¿½Ï¸ï¿½Ë¹ï¿½Ö²ï¿½
+//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Lï¿½ï¿½sketchÃ¿Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½1sigma,2sigma,3sigmaï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½
 bool Terminate(double theta)
 {
     double STEP = 0.005;
@@ -868,16 +894,16 @@ int main()
     freopen("out.txt", "w", stdout);
 #endif // FILEOUT
 
-    // ¸³Óè¹þÏ£º¯Êý
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ï£ï¿½ï¿½ï¿½ï¿½
     hash_function[1] = test_hash_0;
     hash_function[2] = test_hash_1;
     hash_function[3] = test_hash_2;
-    // FÎªËùÓÐ´óÁ÷¼¯ºÏ£¬FFÎªÃ¿´ÎÑ­»·ÕÒ³öµÄ´óÁ÷¼¯ºÏ
+    // FÎªï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï£ï¿½FFÎªÃ¿ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½Ò³ï¿½ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     vector<ans_t> F;
 
-    int lowest_agree = (int)(((double)k_count / (double)heavy_hash_length) * lowest_agree_ratio); // µÚÒ»Åú×îµÍ¼ÆÈë´óÁ÷µÄagree number
+    int lowest_agree = (int)(((double)k_count / (double)heavy_hash_length) * lowest_agree_ratio); // ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½agree number
 
-    if (0 == Read_Flowdata()) //Á÷Êý¾Ý¶ÁÈë
+    if (0 == Read_Flowdata()) //ï¿½ï¿½ï¿½ï¿½ï¿½Ý¶ï¿½ï¿½ï¿½
     {
         {
             char tmp_bit_flow[l + 2];
@@ -909,9 +935,9 @@ int main()
                 F.push_back(ans_t(tmp_bit_flow, heavy_flow[j].f, heavy_flow[j].agree, tmp_prob_vector));
             }
         }
-        // sketch Éú³ÉN(p,sigma)
+        // sketch ï¿½ï¿½ï¿½ï¿½N(p,sigma)
         Flow2Sketch();
-        // ¼ÓÈëheavy_flow
+        // ï¿½ï¿½ï¿½ï¿½heavy_flow
         Sketch2N_p_sigma();
 
         printf("Read in flow data success\n");
@@ -977,7 +1003,7 @@ int main()
                 }
             }
         }
-        //±¾´ÎÑ­»·ÕÒ³ö´óÁ÷Ê±£¬ÌÞ³ý´óÁ÷£¬ÖØÐÂ¼ÆËãÆÚÍû¡¢·½²î
+        //ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½Ò³ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½Þ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (!FF.empty())
         {
             printf("SIZE : %d\n", FF.size());
@@ -1022,7 +1048,7 @@ int main()
 
         if (Terminate(theta))
             break;
-        //Ã»ÓÐÕÒ³ö´óÁ÷£¬theta¼õ°ë
+        //Ã»ï¿½ï¿½ï¿½Ò³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½thetaï¿½ï¿½ï¿½ï¿½
         if (FF.empty())
             theta /= 2;
     }
@@ -1105,6 +1131,10 @@ int main()
         {
             if (i.second.i1 > THRESHOLD || i.second.i2 > THRESHOLD)
             {
+                if(i.second.i1 == 18031)
+                {
+                    Flow_out(i.first);
+                }
                 // Flow_out(i.first);
 #ifdef PRINT_RESULT
                 printf("appear  %d  times, SKETCH CATCH %d TIMES, RATIO: %lf\n", i.second.i1, i.second.i2, i.second.ratio);
