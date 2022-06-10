@@ -47,11 +47,11 @@ const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // 如果估值高过最小sketch�
 const double MY_ERROR_THRESHOLD_V0 = 0.95;    // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
 
 // 将l,r,c参数及hash函数提前,以方便使用
-const int l = 8 * ID_length;            // 流的bit数
-const int r = 3;                        // sketch的行数
-const int c = 9000;                     // sketch的列数
-const int heavy_hash_length = 18000;    // heavy_flow的长度
-double eta = 50;                        // disagree / agree 比例
+const int l = 8 * ID_length;         // 流的bit数
+const int r = 3;                     // sketch的行数
+const int c = 9000;                  // sketch的列数
+const int heavy_hash_length = 18000; // heavy_flow的长度
+double eta = 50;                     // disagree / agree 比例
 
 //---------------------   在此调参   --------------------------//
 
@@ -710,11 +710,10 @@ struct two_int
     two_int() : i1(0), i2(0){};
 };
 
-
-double str2double(char* digit)
+double str2double(char *digit)
 {
     unsigned int num = 0;
-    double  num1 = 0;
+    double num1 = 0;
     while (*digit != '\0')
     {
         if (*digit >= '0' && *digit <= '9')
@@ -734,14 +733,14 @@ double str2double(char* digit)
             break;
         }
     }
-    while(*digit != '\0')
+    while (*digit != '\0')
         digit++;
     digit = digit - 1;
     while (*digit != '.')
     {
         if (*digit >= '0' && *digit <= '9')
         {
-            num1 = num1*0.1 + (*digit - '0');
+            num1 = num1 * 0.1 + (*digit - '0');
             digit--;
         }
         else
@@ -750,14 +749,34 @@ double str2double(char* digit)
             break;
         }
     }
-    return(num + num1*0.1);
+    return (num + num1 * 0.1);
 }
 
-int main(int argc, const char** argv)
+int test(double e,FILE* fout);
+
+int main()
 {
-    char eta_str[200];
-    strcpy(eta_str,argv[1]);
-    eta = str2double(eta_str);
+    char OutName[100];
+    sprintf(OutName, "./out.txt");
+    FILE *fout = fopen(OutName, "a+");
+
+    double ee;
+    ee = 0.5;
+    while (ee < 10)
+    {
+        test(ee,fout);
+        if (0.5 <= ee && ee <= 1.5)
+            ee += 1;
+        else ee += 1;
+    }
+    
+    fclose(fout);
+
+    return 0;
+}
+int test(double e,FILE* fout)
+{
+    eta = e;
     // 赋予哈希函数
     hash_function[1] = test_hash_0;
     hash_function[2] = test_hash_1;
@@ -944,7 +963,7 @@ int main(int argc, const char** argv)
             if (i.second.i1 > THRESHOLD)
             {
                 error_rate += i.second.i1 * (i.second.ratio - 1.0) * (i.second.ratio - 1.0);
-                error_rate_2 +=(i.second.ratio - 1.0) * (i.second.ratio - 1.0);
+                error_rate_2 += (i.second.ratio - 1.0) * (i.second.ratio - 1.0);
                 if (i.second.i1 < THRESHOLD_T2)
                 {
                     error_rate_3 += i.second.i1 * (i.second.ratio - 1.0) * (i.second.ratio - 1.0);
@@ -953,12 +972,7 @@ int main(int argc, const char** argv)
             }
         }
 
-        char OutName[100];
-        sprintf(OutName, "./out.txt");
-        FILE *fout = fopen(OutName, "w");
-        fprintf(fout,"%lf,%lf,%lf,%lf,%lf\n",eta,error_rate,error_rate_2,error_rate_3,error_rate_4);
-        fclose(fout);
-        return 0;
+        fprintf(fout, "%lf,%lf,%lf,%lf,%lf\n", eta, error_rate, error_rate_2, error_rate_3, error_rate_4);
     }
 #endif // DEBUG
     return 0;
