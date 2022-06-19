@@ -40,7 +40,7 @@ const int TimeStamp_length = 0;
 const int DATA_FILE_NUM = 10;     // Ҫ�����ļ�����
 double POSSIBLE_THRESHOLD = 0.99; // hat_p����ֵ���������ṩ����0.99
 const int STAR_THRESHOLD = 11;    // ���һ���������ʽ�г�������ô���*��������Ϊû�д���
-int THRESHOLD = 10000;             // չʾ������ô��ļ�¼������
+int THRESHOLD = 4000;             // չʾ������ô��ļ�¼������
 
 const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // �����ֵ�߹���Сsketch����ô�౶������Ϊ�ܿ����Ǽ�����
 const double MY_ERROR_THRESHOLD_V0 = 0.95;    // �����ֵ�߹���Сsketch����ô�౶������Ϊ�ܿ����Ǽ�����
@@ -49,7 +49,7 @@ const double MY_ERROR_THRESHOLD_V0 = 0.95;    // �����ֵ�߹���
 const int l = 8 * ID_length;            // ����bit��
 const int r = 3;                        // sketch������
 const int c = 9000;                     // sketch������
-const int heavy_hash_length = 18000;    // heavy_flow�ĳ���
+const int heavy_hash_length = 1;    // heavy_flow�ĳ���
 double eta = 50;                        // disagree / agree ����
 double lowest_agree_ratio = 2.87915509; // ��һ����ͼ��������agree ratio
 

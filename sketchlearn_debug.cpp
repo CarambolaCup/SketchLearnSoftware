@@ -13,7 +13,7 @@ using namespace std;
 #pragma warning(disable : 4996)
 
 //#define FILEOUT
-#define SMALL_DATA //小数据测试开关
+//#define SMALL_DATA //小数据测试开关
 #define DEBUG
 //#define OVERALL_DEBUG //比较所有流
 #define LOCAL_DEBUG //比较捕获了的流
@@ -38,7 +38,7 @@ const int TimeStamp_length = 0;
 //---------------------   在此调参   --------------------------//
 
 const int DATA_FILE_NUM = 10;// 要读的文件个数
-int THRESHOLD = 10000;// 展示超过这么大的记录到的流
+int THRESHOLD = 4000;// 展示超过这么大的记录到的流
 
 double POSSIBLE_THRESHOLD = 0.99;// hat_p的阈值，论文里提供的是0.99
 const int STAR_THRESHOLD = 11;// 如果一个正则表达式中超过了这么多个*，我们认为没有大流
@@ -49,7 +49,7 @@ const double MY_ERROR_THRESHOLD_V0 = 0.95; // 如果估值高过最小sketch的�
 // 将l,r,c参数及hash函数提前,以方便使用
 const int l = 8 * ID_length;// 流的bit数
 const int r = 3;   // sketch的行数
-const int c = 5000; // sketch的列数
+const int c = 9000; // sketch的列数
 
 //---------------------   在此调参   --------------------------//
 
@@ -933,6 +933,8 @@ int main()
             flow_queue[x].ratio = (double)flow_queue[x].i1/flow_queue[x].i2;
         }
         double error_rate = 0;
+        double test_error_rate[21] = { 0 };
+        int test_error_fre[21] = { 0 };
         for (auto i : flow_queue)
         {
             if((i.second.i1 > THRESHOLD))
@@ -943,10 +945,19 @@ int main()
                 #endif// PRINT_RESULT
                 error_rate += i.second.i1 * (i.second.ratio - 1.0) * (i.second.ratio - 1.0);
             }
+            int test_type = (i.second.i1 < 20000) ? i.second.i1/1000 : 20;
+            test_error_rate[test_type]+=i.second.i1 * (i.second.ratio - 1.0) * (i.second.ratio - 1.0);
+            test_error_fre[test_type]+=i.second.i1;
         }
         
         printf("\nDEBUG END!!! \nTHRESHOLD: %d\nERROR RATIO: %lf\nPOSSIBLE_THRESHOLD: %lf\nSTAR_THRESHOLD: %d\nMY_ERROR_THRESHOLD_SKETCH: %lf\nMY_ERROR_THRESHOLD_V0: %lf\nSKETCH LENGTH: %d, HEIGHT: %d, WIDTH: %d\n",
                THRESHOLD,error_rate,POSSIBLE_THRESHOLD,STAR_THRESHOLD,MY_ERROR_THRESHOLD_SKETCH,MY_ERROR_THRESHOLD_V0, l, r, c);
+        
+        for(int i=1;i <= 20;i++)
+        {
+            printf("SIZE: %d - %d: average error rate: %lf\n", 1000*i, 1000*(i+1), test_error_rate[i]/test_error_fre[i]);
+        }
+        
         return 0;
     }
 #endif // DEBUG

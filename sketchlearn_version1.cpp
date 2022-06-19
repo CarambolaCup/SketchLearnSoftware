@@ -13,7 +13,7 @@ using namespace std;
 #pragma warning(disable : 4996)
 
 //#define FILEOUT
-#define SMALL_DATA //小数据测试开关
+//#define SMALL_DATA //小数据测试开关
 #define DEBUG
 //#define OVERALL_DEBUG //比较所有流
 #define LOCAL_DEBUG //比较捕获了的流
@@ -21,6 +21,7 @@ using namespace std;
 //#define PRINT_LOOP_TIMES//最后输出loop的次数
 //#define PRINT_TERMINATE_DATA//输出TERMINATE的数据
 //#define PRINT_CAUGHT_FLOW_NUM//每捕获100个流输出一条消息
+//#define USE_HEAVY_PART
 
 // 兰佳晨
 // Encoded in CRLF UTF-8
@@ -40,7 +41,7 @@ const int TimeStamp_length = 0;
 const int DATA_FILE_NUM = 10;     // 要读的文件个数
 double POSSIBLE_THRESHOLD = 0.99; // hat_p的阈值，论文里提供的是0.99
 const int STAR_THRESHOLD = 11;    // 如果一个正则表达式中超过了这么多个*，我们认为没有大流
-int THRESHOLD = 10000;             // 展示超过这么大的记录到的流
+int THRESHOLD = 4000;             // 展示超过这么大的记录到的流
 
 const double MY_ERROR_THRESHOLD_SKETCH = 2.0; // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
 const double MY_ERROR_THRESHOLD_V0 = 0.95;    // 如果估值高过最小sketch的这么多倍，则认为很可能是假阳性
@@ -160,6 +161,10 @@ double sigma_initial[l + 1];
 
 void Insert_Flow(ID_input f)
 {
+#ifndef USE_HEAVY_PART
+    smaller_id_flow.push_back(f);
+    return;
+#endif
     int h;
 
     h = heavy_hash(f);
@@ -236,10 +241,6 @@ int Read_Flowdata()
                 // ����ʱ���
                 Insert_Flow(tmp_five_tuple);
                 all_id_flow.push_back(tmp_five_tuple);
-                if(my_debug_cmp(tmp_five_tuple.x))
-                {
-                    printf("GOT BUGGY FLOW! SIZE: %d\n",++buggy_num);
-                }
                 k_count++;
                 fread(&tmp_five_tuple, TimeStamp_length, 1, fin);
             }
